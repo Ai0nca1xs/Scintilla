@@ -1,48 +1,59 @@
 ---
 ---
-<div class="cursor"></div>
+{/* transition:persist 讓游標元素在頁面轉場時保留同一個 DOM 節點，事件監聽不會失效 */}
+<div class="cursor" transition:persist="cursor"></div>
 
 <style>
   .cursor {
     width: 10px;
     height: 10px;
-    background-color: black;
+    background-color: white; /* 設為白色以完美反轉所有背景 */
     border-radius: 50%;
     position: fixed;
-    pointer-events: none; /* 讓游標穿透元素，不影響點擊 */
+    pointer-events: none; /* 絕對必要：讓游標穿透，不阻擋下層點擊 */
     z-index: 9999;
-    /* 這裡使用混合模式來達成你的「反轉色」需求 */
-    mix-blend-mode: difference; 
-    transition: transform 0.1s ease, background-color 0.2s ease;
+    mix-blend-mode: difference; /* 反轉色核心屬性 */
+    
+    /* 初始隱藏，直到 JS 偵測到鼠標移動才顯示 */
+    display: none; 
+    
+    /* 平滑過渡動畫設定 */
+    transition: transform 0.2s cubic-bezier(0.2, 0, 0.2, 1);
   }
 
-  {
-  /* 初始顯示 */
-    opacity: 1; 
-    display: block;
-  }
-
-  /* 點擊時的紅色狀態 */
   .cursor.active {
-    background-color: red;
-    transform: scale(1.5);
+    /* 點擊時僅放大 2.5 倍，不改變顏色，避免與 difference 模式衝突 */
+    transform: scale(2.5); 
   }
 </style>
 
 <script>
+  // 選取自訂游標元素
   const cursor = document.querySelector('.cursor');
 
-  // 確保 cursor 存在才執行
+  // 確保元素存在且為 HTML 實體，避免 TypeScript 報錯
   if (cursor instanceof HTMLElement) {
+    
+    // 監聽鼠標移動事件
     document.addEventListener('mousemove', (e) => {
-      cursor.style.left = e.clientX + 'px';
-      cursor.style.top = e.clientY + 'px';
+      // 1. 動態隱藏系統箭頭：寫在 JS 裡可避免 CSS 提早封鎖滑鼠事件
+      document.body.style.cursor = 'none';
+      
+      // 2. 確保自訂游標顯示
+      cursor.style.display = 'block';
+      
+      // 3. 座標跟隨與置中修正
+      // 減去 5px 是因為游標寬高為 10px，這樣能讓滑鼠真正的觸發點位於圓點「正中心」
+      cursor.style.left = (e.clientX - 5) + 'px';
+      cursor.style.top = (e.clientY - 5) + 'px';
     });
 
+    // 監聽鼠標點擊按下事件
     document.addEventListener('mousedown', () => {
       cursor.classList.add('active');
     });
 
+    // 監聽鼠標點擊放開事件
     document.addEventListener('mouseup', () => {
       cursor.classList.remove('active');
     });

@@ -1,0 +1,49 @@
+---
+// src/components/SmoothScroll.astro
+---
+<script>
+  import Lenis from '@studio-freight/lenis';
+
+  // 初始化 Lenis
+  const lenis = new Lenis({
+    duration: 1.2,          
+    easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), 
+    syncTouch: false        // 保持 false 以確保手機端使用原生滑動效能
+  });
+
+  // 建立 requestAnimationFrame 動態遞迴渲染循環 (Animation loop)
+  function raf(time: number) {
+    lenis.raf(time);
+    requestAnimationFrame(raf);
+  }
+
+  requestAnimationFrame(raf);
+
+  // 配合 Astro 的 View Transitions，在換頁時重新校準滾動錨點
+  document.addEventListener('astro:after-swap', () => {
+    lenis.scrollTo(0, { immediate: true });
+  });
+</script>
+
+<style is:global>
+  /* 鎖定並配置 Lenis 官方標準的 CSS 骨架，確保滾動條與渲染效能 */
+  html.lenis {
+    height: auto;
+  }
+
+  .lenis.lenis-smooth {
+    scroll-behavior: auto !important;
+  }
+
+  .lenis.lenis-smooth [data-lenis-prevent] {
+    scroll-behavior: contain;
+  }
+
+  .lenis.lenis-stopped {
+    overflow: hidden;
+  }
+
+  .lenis.lenis-scrolling iframe {
+    pointer-events: none;
+  }
+</style>

@@ -1,13 +1,30 @@
 /* 1. 定義全局設計變數 */
 :root {
-  --color-bg: #ffffff;
-  --color-text: #242424;
+  /* 色彩系統 (Scintilla Color System) */
+  --color-bg: #F8F9FA; /* 冷灰白基底，降低視覺雜訊 */
+  --color-text: #1A1A1A; /* 沉穩深灰黑 */
+  
+  /* 煆燒金屬漸層：模擬鉍晶體與火焰光譜 */
+  --calx-gradient: radial-gradient(
+    circle,
+    #FF007F 0%,   /* 品紅 */
+    #ff7700 35%,  /* 高溫金 */
+	#ff6f00 50%,  /* 黃光 */
+    #ffd500 60%,  /* 青藍 */
+    #1A1A1A 80%  /* 冷卻黑 */
+  );
+
+  /* 空間與尺寸 */
   --space-sm: 0.5rem;
   --space-md: 1.5rem;
   --space-lg: 3rem;
   --container-max-width: 1200px;
 
+  /* 字體與字重變數 */
   --font-primary: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-weight-thin: 300;
+  --font-weight-bold: 700;
+  --font-size-nav: 12px;
 }
 
 /* 2. 基礎重置與游標、文本對齊 */
@@ -23,12 +40,11 @@ body {
   overflow-wrap: break-word;
   word-wrap: break-word;
 
-  /* 隱藏系統預設游標 */
-  cursor: none; 
+  /* 系統預設游標 */
+  cursor: auto; 
 }
 
 /* 3. 字體設定 */
-
 /* 超連結格式 */
 a {
   color: inherit; /* 繼承父元素的字體顏色 */
@@ -43,11 +59,9 @@ a:hover {
 
 /* 全域基礎設定 */
 body {
-  font-family: var(--font-primary);
   font-weight: var(--font-weight-thin); /* 預設使用 Thin */
   font-stretch: 110%;
   font-style: normal;
-  /* Font-variant 設定，通常可省略，但加上能確保渲染一致 */
   font-variant-alternates: normal;
   font-variant-caps: normal;
   font-variant-east-asian: normal;
@@ -82,21 +96,22 @@ h3 {
   margin-top: 0;
 }
 
+/* 煆燒金屬漸層標題應用類別 (Scintilla Calx Title) */
+.title-calx {
+  background: var(--calx-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  display: inline-block; /* 確保漸層能正確套用在文字邊界內 */
+}
+
 /* 正文與段落排版 (Body Text & Paragraphs) */
 p, span, li {
   /* 承襲你設定的 Helvetica Neue Thin */
   font-weight: 300; 
-  
-  /* 正文字級 */
   font-size: 12px; 
-  
-  /* 行高 */
   line-height: 1.5; 
-  
-  /* 字母間距微調 */
   letter-spacing: 0.03em; 
-  
-  /* 段落之間的垂直間距 */
   margin-top: 0;
   margin-bottom: 0.8rem; 
 }
@@ -108,8 +123,8 @@ strong, b {
 
 /* 目錄欄專屬設定 (Navbar / Menu) */
 .nav-menu {
-  font-size: var(--font-size-nav); /* 強制 12px */
-  font-weight: var(--font-weight-bold); /* 根據你提供的 700 設定 */
+  font-size: var(--font-size-nav); 
+  font-weight: var(--font-weight-bold); 
   
   /* 邊距設定 */
   padding-top: 0px;
@@ -136,9 +151,43 @@ strong, b {
   padding-right: 8px;
 }
 
+/* 通用工具類：實驗室 metadata 等寬文字（首頁、頁腳、各子頁面共用） */
+.metadata {
+  font-family: monospace;
+  font-size: 10px;
+  opacity: 0.4;
+  letter-spacing: 0.1em;
+}
+
+/* 各子頁面的標題區塊 */
+.page-header {
+  margin: var(--space-lg) 0;
+}
+
 /* 5. 自適應網格模塊 */
 .portfolio-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 3rem;
+}
+
+/* 6. 頁面過渡動畫 (View Transitions) - 沉澱與顯影 */
+/* 舊內容：沉澱 (下沉並轉淡) */
+@keyframes precipitate {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(20px); }
+}
+
+/* 新內容：顯影 (模糊至清晰) */
+@keyframes develop {
+  from { opacity: 0; filter: blur(8px) grayscale(50%); }
+  to { opacity: 1; filter: blur(0) grayscale(0%); }
+}
+
+::view-transition-old(root) {
+  animation: precipitate 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+::view-transition-new(root) {
+  animation: develop 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }

@@ -1,0 +1,125 @@
+---
+// 檔案庫頁主體：分類篩選 + 標本卡網格，EN / FR 共用
+import { getCollection } from 'astro:content';
+import ProjectCard from '@/components/ProjectCard.astro';
+import { useTranslations, type Lang } from '@/i18n/utils';
+
+interface Props {
+	lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+
+const localePrefix = lang === 'FR' ? 'fr/' : 'en/';
+const entries = (await getCollection('projects', ({ id }) => id.startsWith(localePrefix))).sort(
+	(a, b) => a.data.order - b.data.order
+);
+
+const categories = ['GRA', 'SCE', 'INS', 'PRD', 'PHO'] as const;
+---
+
+<header class="page-header">
+	<h1 class="title-calx">{t.project.heading}</h1>
+	<p class="metadata">
+		SORT BY: CURATED | FILTER: <span data-filter-label>{t.project.filterAll}</span>
+	</p>
+</header>
+
+<nav class="filter-bar" aria-label="Category filter">
+	<button class="filter-btn metadata active" data-filter="ALL">{t.project.filterAll}</button>
+	{
+		categories.map((cat) => (
+			<button class="filter-btn metadata" data-filter={cat}>
+				{cat} — {t.categories[cat]}
+			</button>
+		))
+	}
+</nav>
+
+<section class="portfolio-grid" data-project-grid>
+	{entries.map((entry) => <ProjectCard entry={entry} lang={lang} />)}
+</section>
+
+<style>
+	.filter-bar {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.8rem;
+		margin-bottom: var(--space-lg);
+	}
+
+	.filter-btn {
+		background: none;
+		border: 1px solid rgba(26, 26, 26, 0.15);
+		padding: 0.35rem 0.8rem;
+		cursor: pointer;
+		opacity: 0.55;
+		transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+	}
+
+	.filter-btn:hover {
+		opacity: 1;
+		border-color: rgba(184, 115, 51, 0.5);
+	}
+
+	.filter-btn.active {
+		opacity: 1;
+		border-color: rgba(26, 26, 26, 0.6);
+	}
+
+	/* 篩選切換：卡片以「沉澱/顯影」的方式離場入場（v1 先做輕量淡入） */
+	.portfolio-grid :global(.is-hidden) {
+		display: none;
+	}
+
+	.portfolio-grid :global([data-category]) {
+		animation: card-develop 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+	}
+
+	@keyframes card-develop {
+		from {
+			opacity: 0;
+			filter: blur(4px);
+			transform: translateY(8px);
+		}
+		to {
+			opacity: 1;
+			filter: blur(0);
+			transform: translateY(0);
+		}
+	}
+</style>
+
+<script>
+	// 分類篩選。astro:page-load 兼容首次載入與轉場後的重新綁定。
+	function initProjectFilters() {
+		const grid = document.querySelector<HTMLElement>('[data-project-grid]');
+		if (!grid) return;
+
+		const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('.filter-btn'));
+		const label = document.querySelector('[data-filter-label]');
+		const cards = Array.from(grid.querySelectorAll<HTMLElement>('[data-category]'));
+
+		buttons.forEach((btn) => {
+			btn.addEventListener('click', () => {
+				const filter = btn.dataset.filter ?? 'ALL';
+				buttons.forEach((b) => b.classList.toggle('active', b === btn));
+				if (label) label.textContent = (btn.textContent ?? '').trim();
+
+				cards.forEach((card) => {
+					const show = filter === 'ALL' || card.dataset.category === filter;
+					card.classList.toggle('is-hidden', !show);
+					if (show) {
+						// 重觸發顯影動畫，營造「重新校準光譜」的感覺
+						card.style.animation = 'none';
+						void card.offsetWidth;
+						card.style.animation = '';
+					}
+				});
+			});
+		});
+	}
+
+	document.addEventListener('astro:page-load', initProjectFilters);
+</script>

@@ -1,0 +1,99 @@
+---
+// 作品詳情頁主體：規格表（metadata）+ 完整敘述，EN / FR 共用
+import type { CollectionEntry } from 'astro:content';
+import { render } from 'astro:content';
+import { localizePath, useTranslations, type Lang } from '@/i18n/utils';
+
+interface Props {
+	entry: CollectionEntry<'projects'>;
+	lang: Lang;
+}
+
+const { entry, lang } = Astro.props;
+const t = useTranslations(lang);
+const d = entry.data;
+const { Content } = await render(entry);
+---
+
+<article class="project-detail">
+	<a href={localizePath(lang, '/project')} class="metadata back-link">{t.project.back}</a>
+
+	<header class="page-header">
+		<p class="metadata">
+			{d.code} · {t.categories[d.category]} · {d.year}
+			{d.status === 'in-progress' && ` · ${t.project.statusInProgress}`}
+		</p>
+		<h1 class="title-calx detail-title">{d.title}</h1>
+	</header>
+
+	<dl class="spec-sheet metadata">
+		{d.medium && <dt>MEDIUM</dt>}
+		{d.medium && <dd>{d.medium}</dd>}
+		{d.materials && <dt>MATERIALS</dt>}
+		{d.materials && <dd>{d.materials}</dd>}
+		{d.dimensions && <dt>DIMENSIONS</dt>}
+		{d.dimensions && <dd>{d.dimensions}</dd>}
+		{d.exhibitions && <dt>EXHIBITIONS</dt>}
+		{d.exhibitions && <dd>{d.exhibitions.map((e) => <span class="exhibition">{e}</span>)}</dd>}
+		<dt>KEYWORDS</dt>
+		<dd>{d.tags.join(' · ')}</dd>
+	</dl>
+
+	<div class="prose">
+		<Content />
+	</div>
+</article>
+
+<style>
+	.project-detail {
+		max-width: 780px;
+		margin: 0 auto;
+		padding-bottom: calc(var(--space-lg) * 2);
+	}
+
+	.back-link {
+		display: inline-block;
+		margin-top: var(--space-md);
+		opacity: 0.6;
+		transition: opacity 0.2s ease;
+	}
+
+	.back-link:hover {
+		opacity: 1;
+	}
+
+	.detail-title {
+		font-size: 32px;
+		font-weight: 600;
+	}
+
+	/* 標本規格表：等寬字體的客觀紀錄 */
+	.spec-sheet {
+		display: grid;
+		grid-template-columns: 110px 1fr;
+		gap: 0.5rem 1.5rem;
+		margin: 0 0 var(--space-lg);
+		padding: 1.2rem 0;
+		border-top: 1px solid rgba(26, 26, 26, 0.15);
+		border-bottom: 1px solid rgba(26, 26, 26, 0.15);
+		opacity: 0.7;
+	}
+
+	.spec-sheet dt {
+		opacity: 0.55;
+	}
+
+	.spec-sheet dd {
+		margin: 0;
+	}
+
+	.exhibition {
+		display: block;
+	}
+
+	.prose :global(p) {
+		font-size: 13px;
+		line-height: 1.75;
+		margin-bottom: 1.2rem;
+	}
+</style>

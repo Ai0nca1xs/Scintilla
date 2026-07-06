@@ -1,0 +1,35 @@
+---
+// 全站共用的頁面外殼：<html> 骨架 + Header + Footer + 游標 + 平滑滾動。
+// 頁面只需要提供標題、描述和內容本身。
+import BaseHead from '@/components/BaseHead.astro';
+import Cursor from '@/components/Cursor.astro';
+import Footer from '@/components/Footer.astro';
+import Header from '@/components/Header.astro';
+import SmoothScroll from '@/components/SmoothScroll.astro';
+import { SITE_DESCRIPTION } from '@/consts';
+import { getLangFromUrl } from '@/i18n/utils';
+
+interface Props {
+	title: string;
+	description?: string;
+}
+
+const { title, description = SITE_DESCRIPTION } = Astro.props;
+const lang = getLangFromUrl(Astro.url);
+---
+
+<!doctype html>
+<html lang={lang === 'FR' ? 'fr' : 'en'}>
+	<head>
+		<BaseHead title={title} description={description} />
+	</head>
+	<body>
+		<Cursor />
+		<Header />
+		<main class="layout-container">
+			<slot />
+		</main>
+		<Footer />
+		<SmoothScroll />
+	</body>
+</html>

@@ -1,0 +1,31 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { useTranslations } from '@/i18n/utils';
+
+const t = useTranslations('EN');
+---
+
+<BaseLayout title={t.contact.pageTitle}>
+	<div class="contact-container">
+		<h1 class="metadata">{t.contact.heading}</h1>
+		<a href={`mailto:${t.contact.email.toLowerCase()}`} class="title-calx email-link">
+			{t.contact.email}
+		</a>
+		<p set:html={t.contact.blurbHtml} />
+	</div>
+</BaseLayout>
+
+<style>
+	.contact-container {
+		min-height: 50vh;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		align-items: center;
+		text-align: center;
+	}
+	.email-link {
+		font-size: 2rem;
+		margin: var(--space-md) 0;
+	}
+</style>

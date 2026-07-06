@@ -6,7 +6,10 @@ import { defineConfig, fontProviders } from 'astro/config';
 
 // https://astro.build/config
 export default defineConfig({
-	site: 'https://example.com',
+	// GitHub Pages 專案站點：部署在 https://ai0nca1xs.github.io/qy-Scintilla-Portfolio26/
+	// base 是子路徑前綴，站內連結需透過 src/i18n/utils.ts 的 withBase() 生成
+	site: 'https://ai0nca1xs.github.io',
+	base: '/qy-Scintilla-Portfolio26',
 	integrations: [mdx(), sitemap()],
 	fonts: [
 		{
