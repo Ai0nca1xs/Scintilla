@@ -1,187 +1,231 @@
-/* 1. 定義全局設計變數 */
+/* ============================================================
+   Scintilla 全局樣式
+   體系：冷白實驗室基底 + 煆燒光譜點綴 + 等寬 metadata
+   ============================================================ */
+
+/* 1. 設計變數 (Design Tokens) */
 :root {
   /* 色彩系統 (Scintilla Color System) */
-  --color-bg: #F8F9FA; /* 冷灰白基底，降低視覺雜訊 */
-  --color-text: #1A1A1A; /* 沉穩深灰黑 */
-  
+  --color-bg: #f8f9fa; /* 冷灰白基底，降低視覺雜訊 */
+  --color-ink: #1a1a1a; /* 沉穩深灰黑 */
+  --color-ink-soft: rgba(26, 26, 26, 0.62);
+  --color-line: rgba(26, 26, 26, 0.12); /* 髮絲線 */
+  --color-copper: #b87333; /* 氧化銅褐：hover「升溫」的目標色 */
+
   /* 煆燒金屬漸層：模擬鉍晶體與火焰光譜 */
   --calx-gradient: radial-gradient(
     circle,
-    #FF007F 0%,   /* 品紅 */
-    #ff7700 35%,  /* 高溫金 */
-	#ff6f00 50%,  /* 黃光 */
-    #ffd500 60%,  /* 青藍 */
-    #1A1A1A 80%  /* 冷卻黑 */
+    #ff007f 0%,
+    #ff7700 35%,
+    #ff6f00 50%,
+    #ffd500 60%,
+    #1a1a1a 80%
   );
+  --calx-linear: linear-gradient(90deg, #ffd500, #ff7700, #ff007f, #1a1a1a);
+  --calx-vertical: linear-gradient(180deg, #ffd500, #ff7700, #ff007f);
 
   /* 空間與尺寸 */
   --space-sm: 0.5rem;
   --space-md: 1.5rem;
   --space-lg: 3rem;
-  --container-max-width: 1200px;
+  --space-xl: clamp(4.5rem, 12vh, 8rem);
+  --container-max-width: 1240px;
+  --gutter: clamp(16px, 3vw, 36px);
 
-  /* 字體與字重變數 */
-  --font-primary: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-weight-thin: 300;
-  --font-weight-bold: 700;
-  --font-size-nav: 12px;
+  /* 字體 */
+  --font-primary: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', 'IBM Plex Mono', Menlo, monospace;
+
+  /* 運動曲線 */
+  --ease-oxide: cubic-bezier(0.25, 0.1, 0.25, 1); /* 氧化：緩慢偏移 */
+  --ease-develop: cubic-bezier(0.22, 1, 0.36, 1); /* 顯影：快出緩停 */
 }
 
-/* 2. 基礎重置與游標、文本對齊 */
+/* 2. 基礎 */
 body {
   background-color: var(--color-bg);
-  color: var(--color-text);
+  color: var(--color-ink);
   font-family: var(--font-primary);
+  font-weight: 300;
+  letter-spacing: 0.01em;
   margin: 0;
   padding: 0;
-
-  /* 文本框左對齊與自動換行 */
-  text-align: left;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
   overflow-wrap: break-word;
-  word-wrap: break-word;
-
-  /* 系統預設游標 */
-  cursor: auto; 
 }
 
-/* 3. 字體設定 */
-/* 超連結格式 */
+/* 顯影劑顆粒：極低透明度的膠片噪點，給冷白背景一點物質感 */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9990;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+}
+
+::selection {
+  background: var(--color-ink);
+  color: var(--color-bg);
+}
+
+:focus-visible {
+  outline: 1px solid var(--color-copper);
+  outline-offset: 3px;
+}
+
+/* 3. 超連結 */
 a {
-  color: inherit; /* 繼承父元素的字體顏色 */
-  text-decoration: none; /* 移除預設底線 */
-  transition: opacity 0.2s ease; /* 懸停時的漸變動畫 */
+  color: inherit;
+  text-decoration: none;
+  transition:
+    opacity 0.3s ease,
+    color 0.4s var(--ease-oxide);
 }
 
 a:hover {
-  cursor: pointer; /* 懸停在連結上時顯示為手指 */
-  opacity: 0.6; /* 懸停時透明度降低，產生回饋感 */
+  opacity: 0.7;
 }
 
-/* 全域基礎設定 */
-body {
-  font-weight: var(--font-weight-thin); /* 預設使用 Thin */
-  font-stretch: 110%;
-  font-style: normal;
-  font-variant-alternates: normal;
-  font-variant-caps: normal;
-  font-variant-east-asian: normal;
-  font-variant-emoji: normal;
-  font-variant-ligatures: normal;
-  font-variant-numeric: normal;
-  font-variant-position: normal;
-  font-variation-settings: normal;
-  letter-spacing: 0.05em;
-}
-
-/* 標題與目錄層級設定 (H1, H2, H3) */
-h1 {
-  /* 大標題 */
-  font-size: 22px;
+/* 4. 字體階層 */
+h1,
+h2,
+h3 {
+  margin: 0;
   font-weight: 500;
-  margin-top: 0;
+}
+
+h1 {
+  font-size: 22px;
 }
 
 h2 {
-  /* 界面標題 */
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 400;
-  margin-top: 0;
 }
 
 h3 {
-  /* 目錄欄 */
   font-size: 12px;
   font-weight: 400;
-  letter-spacing: 0.05em; /* 微調字距提升極細字體的易讀性 */
-  margin-top: 0;
+  letter-spacing: 0.05em;
 }
 
-/* 煆燒金屬漸層標題應用類別 (Scintilla Calx Title) */
+p,
+li {
+  font-weight: 300;
+  font-size: 13px;
+  line-height: 1.65;
+  letter-spacing: 0.02em;
+  margin-top: 0;
+  margin-bottom: 0.8rem;
+}
+
+strong,
+b {
+  font-weight: 500;
+}
+
+/* 5. 通用工具類 */
+
+/* 實驗室 metadata：等寬、全大寫、寬字距的客觀紀錄 */
+.metadata {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
+/* 區塊標籤：編號 + 髮絲延長線 */
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.65;
+  margin-bottom: var(--space-md);
+}
+
+.section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-line);
+}
+
+.page-header {
+  margin: var(--space-lg) 0;
+}
+
+/* 煆燒金屬漸層標題 */
 .title-calx {
   background: var(--calx-gradient);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  display: inline-block; /* 確保漸層能正確套用在文字邊界內 */
+  display: inline-block;
 }
 
-/* 正文與段落排版 (Body Text & Paragraphs) */
-p, span, li {
-  /* 承襲你設定的 Helvetica Neue Thin */
-  font-weight: 300; 
-  font-size: 12px; 
-  line-height: 1.5; 
-  letter-spacing: 0.03em; 
-  margin-top: 0;
-  margin-bottom: 0.8rem; 
-}
-
-/* 當正文內出現粗體 <strong> 或 <b> 時，提升一個字重層級到 Medium */
-strong, b {
-  font-weight: 500;
-}
-
-/* 目錄欄專屬設定 (Navbar / Menu) */
-.nav-menu {
-  font-size: var(--font-size-nav); 
-  font-weight: var(--font-weight-bold); 
-  
-  /* 邊距設定 */
-  padding-top: 0px;
-  padding-bottom: 0px;
-  padding-left: 8px;
-  padding-right: 8px;
-  
-  /* 定位與背景設定 */
-  position: absolute;
-  background-attachment: scroll;
-  background-clip: border-box;
-}
-
-/* 4. 建構全局佈局外殼 */
+/* 6. 全局佈局外殼 */
 .layout-container {
   max-width: var(--container-max-width);
   margin-left: auto;
   margin-right: auto;
-  
-  /* 界面整體的 padding 骨架設定 */
-  padding-top: 0px;
-  padding-bottom: 0px;
-  padding-left: 8px;
-  padding-right: 8px;
+  padding: 0 var(--gutter);
 }
 
-/* 通用工具類：實驗室 metadata 等寬文字（首頁、頁腳、各子頁面共用） */
-.metadata {
-  font-family: monospace;
-  font-size: 10px;
-  opacity: 0.4;
-  letter-spacing: 0.1em;
-}
-
-/* 各子頁面的標題區塊 */
-.page-header {
-  margin: var(--space-lg) 0;
-}
-
-/* 5. 自適應網格模塊 */
+/* 7. 自適應網格模塊 */
 .portfolio-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 3rem;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
 }
 
-/* 6. 頁面過渡動畫 (View Transitions) - 沉澱與顯影 */
-/* 舊內容：沉澱 (下沉並轉淡) */
+/* 8. 滾動顯影 (Reveal on Scroll)
+   僅在 JS 可用時隱藏初始狀態，腳本失效時內容依然可見 */
+html.js .reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  filter: blur(6px);
+  transition:
+    opacity 0.9s var(--ease-develop),
+    transform 0.9s var(--ease-develop),
+    filter 0.9s var(--ease-develop);
+}
+
+html.js .reveal.is-revealed {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+
+/* 9. 頁面過渡動畫 (View Transitions) - 沉澱與顯影 */
 @keyframes precipitate {
-  from { opacity: 1; transform: translateY(0); }
-  to { opacity: 0; transform: translateY(20px); }
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(20px);
+  }
 }
 
-/* 新內容：顯影 (模糊至清晰) */
 @keyframes develop {
-  from { opacity: 0; filter: blur(8px) grayscale(50%); }
-  to { opacity: 1; filter: blur(0) grayscale(0%); }
+  from {
+    opacity: 0;
+    filter: blur(8px) grayscale(50%);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0) grayscale(0%);
+  }
 }
 
 ::view-transition-old(root) {
@@ -190,4 +234,19 @@ strong, b {
 
 ::view-transition-new(root) {
   animation: develop 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* 10. 動效偏好：尊重「減少動態效果」設定 */
+@media (prefers-reduced-motion: reduce) {
+  html.js .reveal {
+    opacity: 1;
+    transform: none;
+    filter: none;
+    transition: none;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
 }

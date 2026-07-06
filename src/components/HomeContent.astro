@@ -12,60 +12,87 @@ const t = useTranslations(lang);
 
 // 精選作品：從 projects collection 取 featured 條目，按 order 排序，首頁最多展示 5 件
 const localePrefix = lang === 'FR' ? 'fr/' : 'en/';
-const featured = (
-	await getCollection('projects', ({ id, data }) => id.startsWith(localePrefix) && data.featured)
-)
+const allEntries = await getCollection('projects', ({ id }) => id.startsWith(localePrefix));
+const featured = allEntries
+	.filter((entry) => entry.data.featured)
 	.sort((a, b) => a.data.order - b.data.order)
 	.slice(0, 5);
+const totalCount = allEntries.length;
+const year = new Date().getFullYear();
 ---
 
 <section class="hero-section">
+	{/* 實驗室取景框：四角的標本檔案 metadata */}
+	<div class="hero-corners" aria-hidden="true">
+		<span class="metadata corner tl">SCINTILLA — SPECIMEN ARCHIVE</span>
+		<span class="metadata corner tr">N° {String(totalCount).padStart(3, '0')} SPECIMENS</span>
+		<span class="metadata corner bl">44.84°N — 0.58°W</span>
+		<span class="metadata corner br">CAL. {year}</span>
+	</div>
+
 	<h1 class="hero-title title-calx">SCINTILLA</h1>
-	<div class="metadata">{t.home.heroMeta}</div>
+	<div class="metadata hero-meta">{t.home.heroMeta}</div>
+
+	<div class="metadata scroll-hint">SCROLL TO DEVELOP ↓</div>
 </section>
 
-<section class="concept-intro">
+<section class="concept-intro reveal">
 	<p>{t.home.concept}</p>
 </section>
 
-<section class="personal-intro">
-	<p set:html={t.home.introHtml} />
-</section>
-
-<section class="work-section">
-	<div>
-		<h3 class="section-label">{t.home.capabilitiesLabel}</h3>
-		<ul class="capabilities-list">
-			{t.home.capabilities.map((item) => <li>{item}</li>)}
-		</ul>
-	</div>
-
-	<div>
-		<h3 class="section-label">{t.home.selectedLabel}</h3>
-		<ul class="projects-list">
-			{
-				featured.map((entry) => (
-					<li>
-						<a
-							href={localizePath(lang, `/project/${entry.id.replace(/^(en|fr)\//, '')}`)}
-							class="project-item"
-						>
-							<span class="project-name">
-								{entry.data.title} <span class="metadata">{entry.data.code}</span>
-							</span>
-							<span class="project-tags">
-								{entry.data.tags.map((tag) => `[${tag}]`).join(' ')}
-							</span>
-						</a>
-					</li>
-				))
-			}
-		</ul>
+<section class="intro-section reveal">
+	<span class="section-label">01 / PROFILE</span>
+	<div class="intro-grid">
+		<p class="lead-text" set:html={t.home.introHtml} />
+		<div class="intro-side metadata">
+			<span>BASED IN BORDEAUX, FR</span>
+			<span>OPEN TO INTERNSHIPS</span>
+			<span>EN · FR · ZH · JP</span>
+		</div>
 	</div>
 </section>
 
-<section class="gallery-section">
-	<h3 class="section-label">{t.home.galleryLabel}</h3>
+<section class="capabilities-section reveal">
+	<span class="section-label">02 / {t.home.capabilitiesLabel}</span>
+	<ul class="capabilities-list">
+		{
+			t.home.capabilities.map((item, i) => (
+				<li>
+					<span class="metadata cap-num">{String(i + 1).padStart(2, '0')}</span>
+					<span class="cap-name">{item}</span>
+				</li>
+			))
+		}
+	</ul>
+</section>
+
+<section class="work-section reveal">
+	<span class="section-label">03 / {t.home.selectedLabel}</span>
+	<ol class="project-index">
+		{
+			featured.map((entry, i) => (
+				<li>
+					<a
+						href={localizePath(lang, `/project/${entry.id.replace(/^(en|fr)\//, '')}`)}
+						class="index-row"
+					>
+						<span class="metadata index-num">{String(i + 1).padStart(2, '0')}</span>
+						<span class="index-title">{entry.data.title}</span>
+						<span class="metadata index-code">
+							{entry.data.code} · {entry.data.year}
+						</span>
+					</a>
+				</li>
+			))
+		}
+	</ol>
+	<a class="metadata archive-link" href={localizePath(lang, '/project')}>
+		FULL ARCHIVE ({String(totalCount).padStart(2, '0')}) →
+	</a>
+</section>
+
+<section class="gallery-section reveal">
+	<span class="section-label">04 / {t.home.galleryLabel}</span>
 	<p class="gallery-text">{t.home.galleryText}</p>
 	<a href={localizePath(lang, '/gallery')} class="title-calx gallery-cta">{t.home.galleryCta}</a>
 </section>
@@ -92,60 +119,122 @@ const featured = (
 </svg>
 
 <style>
-	/* --- 首頁專屬佈局 (Homepage Specific Layout) --- */
-
-	/* 1. 首屏概念區 (Hero Section) */
+	/* --- 1. 首屏 (Hero) --- */
 	.hero-section {
-		min-height: 70vh; /* 佔據螢幕 70% 高度，留出呼吸空間 */
+		position: relative;
+		min-height: calc(100svh - 60px); /* 扣除吸頂 header 高度 */
 		display: flex;
 		flex-direction: column;
 		justify-content: center;
 		align-items: center;
 		text-align: center;
-		margin-bottom: var(--space-lg);
+	}
+
+	.hero-corners .corner {
+		position: absolute;
+		opacity: 0.4;
+	}
+	.corner.tl {
+		top: 1.4rem;
+		left: 0;
+	}
+	.corner.tr {
+		top: 1.4rem;
+		right: 0;
+	}
+	.corner.bl {
+		bottom: 1.4rem;
+		left: 0;
+	}
+	.corner.br {
+		bottom: 1.4rem;
+		right: 0;
 	}
 
 	.hero-title {
-		font-size: clamp(2.5rem, 8vw, 4.5rem); /* 巨大化標題，隨視窗寬度縮放 */
-		font-weight: 800;
-		margin-bottom: 0.5rem;
-		letter-spacing: 0.05em;
-
-		/* 綁定下方定義的 SVG 濾鏡 */
-		filter: url(#liquid-filter);
-
-		/* 微 3D 處理：利用多層低透明度陰影模擬物體厚度與光暈 */
-		text-shadow:
-			0px 4px 15px rgba(26, 26, 26, 0.1),
-			0px 1px 2px rgba(255, 255, 255, 0.5);
-
-		transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
-		will-change: filter, transform; /* 提示瀏覽器預先配置 GPU 資源 */
+		font-size: clamp(3.2rem, 13vw, 9.5rem);
+		font-weight: 700;
+		line-height: 0.95;
+		letter-spacing: 0.02em;
+		margin: 0 0 1.2rem;
+		/* 濾鏡由 JS 在互動時動態掛載，平時保持零渲染負擔 */
+		transition: transform 0.3s var(--ease-oxide);
 	}
 
+	.hero-meta {
+		opacity: 0.55;
+	}
+
+	.scroll-hint {
+		position: absolute;
+		bottom: 1.4rem;
+		left: 50%;
+		transform: translateX(-50%);
+		opacity: 0.35;
+		animation: hint-pulse 3.2s var(--ease-oxide) infinite;
+	}
+
+	@keyframes hint-pulse {
+		0%,
+		100% {
+			opacity: 0.35;
+		}
+		50% {
+			opacity: 0.7;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.scroll-hint {
+			animation: none;
+		}
+	}
+
+	/* --- 2. 概念句 --- */
 	.concept-intro {
-		font-size: 14px;
-		max-width: 500px;
-		margin: 0 auto var(--space-lg);
+		max-width: 560px;
+		margin: var(--space-xl) auto;
 		text-align: center;
-		color: rgba(26, 26, 26, 0.6);
 	}
 
-	/* 2. 個人簡介區 (Introduction) */
-	.personal-intro {
-		max-width: 720px;
-		margin: 0 auto calc(var(--space-lg) * 2);
+	.concept-intro p {
+		font-size: 15px;
+		color: var(--color-ink-soft);
 	}
 
-	/* 3. 核心能力與作品區塊 (2:3 Split Layout) */
-	.work-section {
+	/* --- 3. 個人簡介：非對稱編輯網格 --- */
+	.intro-section {
+		margin-bottom: var(--space-xl);
+	}
+
+	.intro-grid {
 		display: grid;
-		grid-template-columns: 2fr 3fr; /* 實踐 2/5 與 3/5 的精確分割 */
+		grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
 		gap: var(--space-lg);
-		margin-bottom: calc(var(--space-lg) * 2);
+		align-items: start;
 	}
 
-	/* 能力列表 (Capabilities) */
+	.lead-text {
+		font-size: clamp(1.25rem, 2.6vw, 1.9rem);
+		line-height: 1.4;
+		letter-spacing: -0.01em;
+		font-weight: 300;
+		margin: 0;
+	}
+
+	.intro-side {
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+		padding-top: 0.5rem;
+		border-top: 1px solid var(--color-line);
+	}
+
+	/* --- 4. 能力清單：滿版髮絲線列表 --- */
+	.capabilities-section {
+		margin-bottom: var(--space-xl);
+	}
+
 	.capabilities-list {
 		list-style: none;
 		padding: 0;
@@ -153,77 +242,146 @@ const featured = (
 	}
 
 	.capabilities-list li {
-		margin-bottom: 0.8rem;
-		font-weight: 400;
+		display: flex;
+		align-items: baseline;
+		gap: 2rem;
+		padding: 1.1rem 0;
+		margin: 0;
+		border-top: 1px solid var(--color-line);
+		font-size: 15px;
+		transition:
+			color 0.4s var(--ease-oxide),
+			padding-left 0.4s var(--ease-oxide);
 	}
 
-	/* 專案列表 (Selected Projects) */
-	.projects-list {
+	.capabilities-list li:last-child {
+		border-bottom: 1px solid var(--color-line);
+	}
+
+	/* 氧化微互動：懸停時文字緩慢偏向銅褐並輕微位移 */
+	.capabilities-list li:hover {
+		color: var(--color-copper);
+		padding-left: 0.6rem;
+	}
+
+	.cap-num {
+		flex-shrink: 0;
+	}
+
+	/* --- 5. 精選作品索引 --- */
+	.work-section {
+		margin-bottom: var(--space-xl);
+	}
+
+	.project-index {
 		list-style: none;
 		padding: 0;
-		margin: 0;
+		margin: 0 0 var(--space-md);
 	}
 
-	.project-item {
-		display: flex;
-		flex-direction: column;
-		padding-bottom: 1rem;
-		margin-bottom: 1.5rem;
-		border-bottom: 1px solid rgba(26, 26, 26, 0.1);
-		transition: border-color 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+	.index-row {
+		position: relative;
+		display: grid;
+		grid-template-columns: 3.5rem minmax(0, 1fr) auto;
+		align-items: baseline;
+		gap: 1.5rem;
+		padding: 1.4rem 0;
+		border-top: 1px solid var(--color-line);
 	}
 
-	/* 結合之前討論的「氧化」微互動 */
-	.project-item:hover {
-		border-color: #ffd700;
-		opacity: 1; /* 覆蓋 global 中 a 標籤預設的 0.6 透明度 */
+	.project-index li:last-child .index-row {
+		border-bottom: 1px solid var(--color-line);
 	}
 
-	.project-name {
-		font-size: 16px;
+	.index-title {
+		font-size: clamp(1.3rem, 3.2vw, 2rem);
 		font-weight: 400;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
+		letter-spacing: -0.01em;
+		transition: transform 0.5s var(--ease-oxide);
 	}
 
-	.project-tags {
-		font-family: monospace;
-		font-size: 10px;
-		opacity: 0.5;
-		margin-top: 0.4rem;
+	/* 底部光譜細線：hover 時從左向右「淬鍊」展開 */
+	.index-row::after {
+		content: '';
+		position: absolute;
+		left: 0;
+		bottom: -1px;
+		height: 1px;
+		width: 0%;
+		background: var(--calx-linear);
+		transition: width 0.6s var(--ease-oxide);
 	}
 
-	/* 4. 個人美學入口 (Gallery Link) */
+	.index-row:hover {
+		opacity: 1;
+	}
+
+	.index-row:hover .index-title {
+		transform: translateX(0.6rem);
+	}
+
+	.index-row:hover::after {
+		width: 100%;
+	}
+
+	.archive-link {
+		display: inline-block;
+		opacity: 0.55;
+		transition: opacity 0.3s ease;
+	}
+
+	.archive-link:hover {
+		opacity: 1;
+	}
+
+	/* --- 6. 個人畫廊入口 --- */
 	.gallery-section {
-		text-align: center;
-		padding-top: var(--space-lg);
-		padding-bottom: calc(var(--space-lg) * 2);
-		border-top: 1px solid rgba(26, 26, 26, 0.05);
+		padding-bottom: var(--space-lg);
 	}
 
 	.gallery-text {
-		margin-bottom: 1.5rem;
-		opacity: 0.8;
+		color: var(--color-ink-soft);
+		margin-bottom: 1.2rem;
 	}
 
 	.gallery-cta {
-		font-size: 14px;
-		font-weight: 500;
+		font-size: clamp(1.5rem, 4.5vw, 2.8rem);
+		font-weight: 600;
+		letter-spacing: 0.01em;
+		transition: letter-spacing 0.6s var(--ease-oxide);
 	}
 
-	/* 響應式設計：在手機版自動切換為上下排列 */
+	.gallery-cta:hover {
+		opacity: 1;
+		letter-spacing: 0.05em;
+	}
+
+	/* --- 響應式 --- */
 	@media (max-width: 768px) {
-		.work-section {
+		.intro-grid {
 			grid-template-columns: 1fr;
+		}
+
+		.index-row {
+			grid-template-columns: 2.5rem minmax(0, 1fr);
+			gap: 0.8rem 1rem;
+		}
+
+		.index-code {
+			grid-column: 2;
+		}
+
+		.corner.tr,
+		.corner.bl {
+			display: none; /* 手機端只保留對角兩枚，避免擁擠 */
 		}
 	}
 </style>
 
 <script>
 	// hero 標題的「液態加熱」互動。
-	// 使用 astro:page-load 事件：搭配 ClientRouter，它在首次載入與每次換頁後都會觸發，
-	// 確保轉場後新的 DOM 元素也能正確綁定監聽。
+	// 效能要點：SVG 濾鏡只在動畫期間掛載到元素上，靜止時完全卸下，
+	// 避免 feTurbulence 常駐渲染層造成的卡頓。
 	let animationFrameId: number;
 
 	function initHeroLiquid() {
@@ -231,7 +389,6 @@ const featured = (
 		const turbulence = document.querySelector('#turbulence');
 		const displacement = document.querySelector('#displacement');
 
-		// 檢查系統的「減少動態效果」設定
 		const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 		if (!title || !turbulence || !displacement || prefersReducedMotion) return;
@@ -246,14 +403,16 @@ const featured = (
 			const freqY = 0.015 + Math.sin(phase) * 0.005;
 			turbulence.setAttribute('baseFrequency', `${freqX} ${freqY}`);
 
-			// 核心：線性插值 (Lerp)，讓當前值以 8% 的速度緩慢逼近目標值
+			// 線性插值 (Lerp)：當前值以 8% 的速度緩慢逼近目標值
 			currentScale += (targetScale - currentScale) * 0.08;
 			displacement.setAttribute('scale', currentScale.toString());
 
-			// 當滑鼠離開，且冷卻到肉眼看不見形變時，停止動畫以節省效能
+			// 冷卻完成後卸下濾鏡並停止循環，歸還渲染資源
 			if (targetScale === 0 && currentScale < 0.1) {
 				currentScale = 0;
 				displacement.setAttribute('scale', '0');
+				title.style.filter = '';
+				title.style.willChange = '';
 				cancelAnimationFrame(animationFrameId);
 				return;
 			}
@@ -262,15 +421,17 @@ const featured = (
 		};
 
 		title.addEventListener('mouseenter', () => {
-			targetScale = 12; // 加熱：設定目標為 12
+			targetScale = 12; // 加熱
+			title.style.filter = 'url(#liquid-filter)';
+			title.style.willChange = 'filter, transform';
 			cancelAnimationFrame(animationFrameId);
 			animateLiquid();
 			title.style.transform = 'scale(1.02) translateY(-2px)';
 		});
 
 		title.addEventListener('mouseleave', () => {
-			targetScale = 0; // 冷卻：設定目標為 0，讓 Lerp 自動處理緩降
-			title.style.transform = 'scale(1) translateY(0)';
+			targetScale = 0; // 冷卻：Lerp 自動處理緩降，降至閾值後卸下濾鏡
+			title.style.transform = '';
 		});
 	}
 

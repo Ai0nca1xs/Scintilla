@@ -1,0 +1,54 @@
+---
+---
+{/* 頁面邊緣的「穿越檔案庫」進度細線：極細極淡，從頂到底逐漸點亮 */}
+<div class="scroll-line" transition:persist="scroll-line" aria-hidden="true">
+	<span class="scroll-line-fill"></span>
+</div>
+
+<style>
+	.scroll-line {
+		position: fixed;
+		top: 0;
+		right: 0;
+		width: 2px;
+		height: 100dvh;
+		z-index: 9000;
+		pointer-events: none;
+	}
+
+	.scroll-line-fill {
+		position: absolute;
+		inset: 0;
+		background: var(--calx-vertical);
+		opacity: 0.45;
+		transform: scaleY(0);
+		transform-origin: top;
+		will-change: transform;
+	}
+</style>
+
+<script>
+	// rAF 節流的滾動進度；transform 縮放不觸發重排
+	const fill = document.querySelector<HTMLElement>('.scroll-line-fill');
+	let rafId = 0;
+
+	function update() {
+		rafId = 0;
+		if (!fill) return;
+		const doc = document.documentElement;
+		const max = doc.scrollHeight - doc.clientHeight;
+		const progress = max > 0 ? doc.scrollTop / max : 0;
+		fill.style.transform = `scaleY(${progress.toFixed(4)})`;
+	}
+
+	window.addEventListener(
+		'scroll',
+		() => {
+			if (!rafId) rafId = requestAnimationFrame(update);
+		},
+		{ passive: true }
+	);
+
+	// 換頁後重新計算（新頁面高度不同）
+	document.addEventListener('astro:page-load', update);
+</script>

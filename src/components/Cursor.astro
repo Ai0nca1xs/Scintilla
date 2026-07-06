@@ -1,61 +1,106 @@
 ---
 ---
 {/* transition:persist 讓游標元素在頁面轉場時保留同一個 DOM 節點，事件監聽不會失效 */}
-<div class="cursor" transition:persist="cursor"></div>
+<div class="cursor" transition:persist="cursor" aria-hidden="true"></div>
+
+<style is:global>
+	/* 只在 JS 確認啟用自訂游標後才隱藏系統游標，腳本失效時仍有游標可用 */
+	html.has-custom-cursor,
+	html.has-custom-cursor a,
+	html.has-custom-cursor button {
+		cursor: none;
+	}
+</style>
 
 <style>
-  .cursor {
-    width: 10px;
-    height: 10px;
-    background-color: white; /* 設為白色以完美反轉所有背景 */
-    border-radius: 50%;
-    position: fixed;
-    pointer-events: none; /* 絕對必要：讓游標穿透，不阻擋下層點擊 */
-    z-index: 9999;
-    mix-blend-mode: difference; /* 反轉色核心屬性 */
-    
-    /* 初始隱藏，直到 JS 偵測到鼠標移動才顯示 */
-    display: none; 
-    
-    /* 平滑過渡動畫設定 */
-    transition: transform 0.2s cubic-bezier(0.2, 0, 0.2, 1);
-  }
-
-  .cursor.active {
-    /* 點擊時僅放大 2.5 倍，不改變顏色，避免與 difference 模式衝突 */
-    transform: scale(2.5); 
-  }
+	.cursor {
+		width: 10px;
+		height: 10px;
+		background-color: white; /* 設為白色以完美反轉所有背景 */
+		border-radius: 50%;
+		position: fixed;
+		left: 0;
+		top: 0;
+		pointer-events: none; /* 絕對必要：讓游標穿透，不阻擋下層點擊 */
+		z-index: 9999;
+		mix-blend-mode: difference; /* 反轉色核心屬性 */
+		opacity: 0; /* 初始隱藏，偵測到指針移動才顯示 */
+		transition: opacity 0.3s ease;
+		will-change: transform;
+	}
 </style>
 
 <script>
-  // 選取自訂游標元素
-  const cursor = document.querySelector('.cursor');
+	// 效能要點：位置與縮放全部走 transform（合成器處理，不觸發重排），
+	// 並用 rAF + 線性插值做柔性跟隨；游標靜止後自動停掉動畫循環。
+	const cursor = document.querySelector('.cursor');
 
-  // 確保元素存在且為 HTML 實體，避免 TypeScript 報錯
-  if (cursor instanceof HTMLElement) {
-    
-    // 監聽鼠標移動事件
-    document.addEventListener('mousemove', (e) => {
-      // 1. 動態隱藏系統箭頭：寫在 JS 裡可避免 CSS 提早封鎖滑鼠事件
-      document.body.style.cursor = 'none';
-      
-      // 2. 確保自訂游標顯示
-      cursor.style.display = 'block';
-      
-      // 3. 座標跟隨與置中修正
-      // 減去 5px 是因為游標寬高為 10px，這樣能讓滑鼠真正的觸發點位於圓點「正中心」
-      cursor.style.left = (e.clientX - 5) + 'px';
-      cursor.style.top = (e.clientY - 5) + 'px';
-    });
+	if (cursor instanceof HTMLElement && window.matchMedia('(pointer: fine)').matches) {
+		let x = -100;
+		let y = -100;
+		let targetX = -100;
+		let targetY = -100;
+		let scale = 1;
+		let targetScale = 1;
+		let hoveringLink = false;
+		let pressing = false;
+		let rafId = 0;
+		let visible = false;
 
-    // 監聽鼠標點擊按下事件
-    document.addEventListener('mousedown', () => {
-      cursor.classList.add('active');
-    });
+		const loop = () => {
+			x += (targetX - x) * 0.25;
+			y += (targetY - y) * 0.25;
+			scale += (targetScale - scale) * 0.18;
+			cursor.style.transform = `translate3d(${x - 5}px, ${y - 5}px, 0) scale(${scale.toFixed(3)})`;
 
-    // 監聽鼠標點擊放開事件
-    document.addEventListener('mouseup', () => {
-      cursor.classList.remove('active');
-    });
-  }
+			const settled =
+				Math.abs(targetX - x) < 0.1 &&
+				Math.abs(targetY - y) < 0.1 &&
+				Math.abs(targetScale - scale) < 0.01;
+
+			rafId = settled ? 0 : requestAnimationFrame(loop);
+		};
+
+		const wake = () => {
+			if (!rafId) rafId = requestAnimationFrame(loop);
+		};
+
+		const updateScale = () => {
+			targetScale = pressing ? 2.4 : hoveringLink ? 1.8 : 1;
+			wake();
+		};
+
+		window.addEventListener(
+			'pointermove',
+			(e) => {
+				targetX = e.clientX;
+				targetY = e.clientY;
+				if (!visible) {
+					visible = true;
+					x = targetX;
+					y = targetY;
+					document.documentElement.classList.add('has-custom-cursor');
+					cursor.style.opacity = '1';
+				}
+				wake();
+			},
+			{ passive: true }
+		);
+
+		window.addEventListener('pointerdown', () => {
+			pressing = true;
+			updateScale();
+		});
+
+		window.addEventListener('pointerup', () => {
+			pressing = false;
+			updateScale();
+		});
+
+		// 懸停在可點擊元素上時游標放大，作為統一的互動回饋
+		document.addEventListener('mouseover', (e) => {
+			hoveringLink = e.target instanceof Element && !!e.target.closest('a, button');
+			updateScale();
+		});
+	}
 </script>

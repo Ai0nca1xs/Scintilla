@@ -6,62 +6,75 @@ const t = useTranslations(lang);
 ---
 
 <header class="site-header">
-	<div class="nav-left">
-		<h2><a href={localizePath(lang, '/')}>{t.site.tagline}</a></h2>
-	</div>
-
-	<nav class="nav-right">
-		<div class="lang-switch">
-			<a
-				href={lang === 'EN' ? '#' : getLangSwitchUrl(Astro.url, 'EN')}
-				class={lang === 'EN' ? 'active' : ''}>EN</a
-			>
-			<span class="separator">/</span>
-			<a
-				href={lang === 'FR' ? '#' : getLangSwitchUrl(Astro.url, 'FR')}
-				class={lang === 'FR' ? 'active' : ''}>FR</a
-			>
+	<div class="header-inner">
+		<div class="nav-left">
+			<a href={localizePath(lang, '/')} class="site-mark">{t.site.tagline}</a>
 		</div>
 
-		<ul class="nav-links">
-			<li><a href={localizePath(lang, '/')}>{t.nav.home}</a></li>
-			<li><a href={localizePath(lang, '/project')}>{t.nav.project}</a></li>
-			<li><a href={localizePath(lang, '/gallery')}>{t.nav.gallery}</a></li>
-			<li><a href={localizePath(lang, '/contact')}>{t.nav.contact}</a></li>
-		</ul>
-	</nav>
+		<nav class="nav-right">
+			<div class="lang-switch">
+				<a
+					href={lang === 'EN' ? '#' : getLangSwitchUrl(Astro.url, 'EN')}
+					class={lang === 'EN' ? 'active' : ''}>EN</a
+				>
+				<span class="separator">/</span>
+				<a
+					href={lang === 'FR' ? '#' : getLangSwitchUrl(Astro.url, 'FR')}
+					class={lang === 'FR' ? 'active' : ''}>FR</a
+				>
+			</div>
+
+			<ul class="nav-links">
+				<li><a href={localizePath(lang, '/')}>{t.nav.home}</a></li>
+				<li><a href={localizePath(lang, '/project')}>{t.nav.project}</a></li>
+				<li><a href={localizePath(lang, '/gallery')}>{t.nav.gallery}</a></li>
+				<li><a href={localizePath(lang, '/contact')}>{t.nav.contact}</a></li>
+			</ul>
+		</nav>
+	</div>
 </header>
 
 <style>
-	/* 1. 容器佈局 */
+	/* 1. 吸頂容器：半透明冷白 + 毛玻璃，滾動時內容從其下方「沉澱」離場 */
 	.site-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: baseline; /* 確保左右兩側文字底部完全對齊 */
-		max-width: var(--container-max-width);
-		margin: 0 auto;
-		padding-top: 1.2rem;
-		padding-bottom: 1.2rem;
-		padding-left: 8px;
-		padding-right: 8px;
+		position: sticky;
+		top: 0;
+		z-index: 500;
+		background: rgba(248, 249, 250, 0.78);
+		-webkit-backdrop-filter: blur(10px);
+		backdrop-filter: blur(10px);
+		border-bottom: 1px solid var(--color-line);
 	}
 
-	/* 2. 文字基礎設定 */
-	.site-header h2,
+	.header-inner {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+		max-width: var(--container-max-width);
+		margin: 0 auto;
+		padding: 1rem var(--gutter);
+	}
+
+	/* 2. 文字基礎設定：等寬 metadata 氣質 */
 	.site-header a,
 	.site-header span {
-		font-size: 11px;
-		font-weight: 300;
-		letter-spacing: 0.05em;
+		font-family: var(--font-mono);
+		font-size: 10px;
+		font-weight: 400;
+		letter-spacing: 0.12em;
 		margin: 0;
-		line-height: 2.5;
+		line-height: 2;
 		text-transform: uppercase;
+	}
+
+	.site-mark {
+		opacity: 0.85;
 	}
 
 	/* 3. 右側導覽群組佈局 */
 	.nav-right {
 		display: flex;
-		align-items: baseline; /* 確保語系與導覽列文字底部對齊 */
+		align-items: baseline;
 		gap: 2.3rem;
 	}
 
@@ -95,27 +108,37 @@ const t = useTranslations(lang);
 	.nav-links a {
 		display: inline-block; /* 必須設定為 inline-block 才能讓 transform 縮放生效 */
 		opacity: 0.6;
-		transition: all 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+		transition: all 0.4s var(--ease-oxide);
 		transform-origin: center;
 	}
 
-	/* 觸發條件 A：當游標懸停在整個導覽列 ul 上時，將所有 a 標籤模糊、變暗、微縮 */
+	/* 觸發條件 A：游標懸停在整個導覽列上時，所有連結模糊、變暗、微縮 */
 	.nav-links:hover a {
 		filter: blur(1px);
 		opacity: 0.2;
 		transform: scale(0.95);
 	}
 
-	/* 觸發條件 B：針對被直接懸停的特定 a 標籤，解除限制並套用氧化視覺 */
+	/* 觸發條件 B：被直接懸停的連結解除限制並套用煆燒漸層 */
 	.nav-links a:hover {
 		filter: blur(0);
 		opacity: 1;
-		transform: scale(1.15); /* 放大文字 */
+		transform: scale(1.12);
 
-		/* 套用全域定義的煅燒漸層變數 */
 		background: var(--calx-gradient);
 		-webkit-background-clip: text;
 		background-clip: text;
 		color: transparent;
+	}
+
+	/* 手機端：站名縮短空間，導覽保持可點 */
+	@media (max-width: 640px) {
+		.header-inner {
+			flex-wrap: wrap;
+			gap: 0.3rem;
+		}
+		.nav-right {
+			gap: 1.4rem;
+		}
 	}
 </style>
