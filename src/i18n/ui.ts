@@ -27,9 +27,17 @@ export interface Dict {
 		heroMeta: string;
 		concept: string;
 		introHtml: string;
-		capabilitiesLabel: string;
-		capabilities: string[];
-		selectedLabel: string;
+		cvEducation: string[];
+		cvExperience: string[];
+		cvMeta: string[];
+		practiceLabel: string;
+		practiceIntroHtml: string;
+		domains: {
+			title: string;
+			blurb: string;
+			cats: ('GRA' | 'SCE' | 'INS' | 'PRD' | 'PHO')[];
+			lens: 'GRA' | 'SCE' | 'INS' | 'PRD' | 'PHO';
+		}[];
 		galleryLabel: string;
 		galleryText: string;
 		galleryCta: string;
@@ -51,6 +59,9 @@ export interface Dict {
 		heading: string;
 		email: string;
 		blurbHtml: string;
+		role: string;
+		location: string;
+		cvButton: string;
 	};
 }
 
@@ -74,15 +85,44 @@ export const dict: Record<Lang, Dict> = {
 			concept: 'A physical translation of poetics through light, space, and material.',
 			introHtml:
 				'I am Qianyu, a multidisciplinary designer exploring the boundaries between <strong>Visual Identity</strong>, <strong>Spatial Narrative</strong>, and <strong>Interactive Experience</strong>. My work seeks to capture the <em>scintilla</em>—the subtle, fleeting sparks of conceptual fusion—and solidify them through rigorous design processes.',
-			capabilitiesLabel: 'Capabilities | What I Do',
-			capabilities: [
-				'Visual Identity & Brand Systems',
-				'Scenography & Spatial Narrative',
-				'Installation & Interactive Experience',
-				'Typography & Editorial Design',
-				'Creative Direction & Strategy',
+			cvEducation: [
+				'2025— · EBABX — École supérieure des beaux-arts de Bordeaux',
+				'2024–25 · Université de Reims — CIEF, French B2',
+				'2017–21 · China Academy of Art — BA Art & Technology, GPA 3.88/5',
 			],
-			selectedLabel: 'Selected Projects',
+			cvExperience: [
+				'2021–22 · Reel Light Environment — colour designer, architectural lighting',
+				'2021 · 2022 · Exhibited at Hangzhou Art Museum & Ningbo Art Museum',
+				'2019–20 · Nouveaux Pousseurs — inclusive design for autistic children',
+				'2019 · Hangzhou Asian Games — campus light installations',
+			],
+			cvMeta: ['Based in Bordeaux, FR', 'Open to internships', 'EN · FR · ZH · JP'],
+			practiceLabel: 'Practice | What I Do',
+			practiceIntroHtml:
+				'I design with <strong>colour</strong> as a method — across print, light, object and space. Each domain below is one wavelength of the same spectrum.',
+			domains: [
+				{
+					title: 'Graphic & Image',
+					blurb:
+						'Editorial systems, typography and photography — colour used as a signature, print as a site of memory.',
+					cats: ['GRA', 'PHO'],
+					lens: 'GRA',
+				},
+				{
+					title: 'Installation & Object',
+					blurb:
+						'Light, colour and matter in dialogue — interactive installations and objects that probe sensory perception.',
+					cats: ['INS', 'PRD'],
+					lens: 'INS',
+				},
+				{
+					title: 'Scenography & Worldbuilding',
+					blurb:
+						'Narrative spaces and speculative universes — from trend scenography to worldbuilding as a design practice.',
+					cats: ['SCE'],
+					lens: 'SCE',
+				},
+			],
 			galleryLabel: 'Personal Aesthetic',
 			galleryText: 'Audio, Painting, Photography, Writing, Music Sharing.',
 			galleryCta: 'ENTER DIGITAL GALLERY ↗',
@@ -111,6 +151,9 @@ export const dict: Record<Lang, Dict> = {
 			email: 'FELICETTEC341A@GMAIL.COM',
 			blurbHtml:
 				'Based in Bordeaux, France.<br />Open to internships, freelance opportunities and collaborations.',
+			role: 'Multidisciplinary designer — colour, light & narrative',
+			location: 'Bordeaux, France',
+			cvButton: 'DOWNLOAD CV',
 		},
 	},
 	FR: {
@@ -132,15 +175,44 @@ export const dict: Record<Lang, Dict> = {
 			concept: "Une traduction physique de la poétique, par la lumière, l'espace et la matière.",
 			introHtml:
 				"Je suis Qianyu, designer pluridisciplinaire explorant les frontières entre <strong>identité visuelle</strong>, <strong>narration spatiale</strong> et <strong>expérience interactive</strong>. Mon travail cherche à capter la <em>scintilla</em> — ces étincelles subtiles et fugaces où les concepts fusionnent — et à les fixer par un processus de design rigoureux.",
-			capabilitiesLabel: 'Capacités | Ce que je fais',
-			capabilities: [
-				'Identité visuelle & systèmes de marque',
-				'Scénographie & narration spatiale',
-				'Installation & expérience interactive',
-				'Typographie & design éditorial',
-				'Direction créative & stratégie',
+			cvEducation: [
+				'2025— · EBABX — École supérieure des beaux-arts de Bordeaux',
+				'2024–25 · Université de Reims — CIEF, français B2',
+				'2017–21 · Académie des Beaux-Arts de Chine — Licence Art & Technologie, GPA 3,88/5',
 			],
-			selectedLabel: 'Projets choisis',
+			cvExperience: [
+				'2021–22 · Reel Light Environment — designer couleurs, éclairage architectural',
+				'2021 · 2022 · Expositions aux Musées d’Art de Hangzhou et de Ningbo',
+				'2019–20 · Nouveaux Pousseurs — design inclusif pour enfants autistes',
+				'2019 · Jeux Asiatiques de Hangzhou — installations lumineuses de campus',
+			],
+			cvMeta: ['Basée à Bordeaux, FR', 'Ouverte aux stages', 'EN · FR · ZH · JP'],
+			practiceLabel: 'Pratique | Ce que je fais',
+			practiceIntroHtml:
+				'Je conçois avec la <strong>couleur</strong> comme méthode — entre imprimé, lumière, objet et espace. Chaque domaine ci-dessous est une longueur d’onde d’un même spectre.',
+			domains: [
+				{
+					title: 'Graphisme & Image',
+					blurb:
+						'Systèmes éditoriaux, typographie et photographie — la couleur comme signature, l’imprimé comme lieu de mémoire.',
+					cats: ['GRA', 'PHO'],
+					lens: 'GRA',
+				},
+				{
+					title: 'Installation & Objet',
+					blurb:
+						'Lumière, couleur et matière en dialogue — installations interactives et objets qui sondent la perception sensorielle.',
+					cats: ['INS', 'PRD'],
+					lens: 'INS',
+				},
+				{
+					title: 'Scénographie & Univers',
+					blurb:
+						'Espaces narratifs et univers spéculatifs — de la scénographie de tendances à la construction de mondes.',
+					cats: ['SCE'],
+					lens: 'SCE',
+				},
+			],
 			galleryLabel: 'Univers personnel',
 			galleryText: 'Audio, peinture, photographie, écriture, partages musicaux.',
 			galleryCta: 'ENTRER DANS LA GALERIE ↗',
@@ -169,6 +241,9 @@ export const dict: Record<Lang, Dict> = {
 			email: 'FELICETTEC341A@GMAIL.COM',
 			blurbHtml:
 				'Bordeaux, France.<br />Disponible pour stages, missions freelance et collaborations.',
+			role: 'Designer pluridisciplinaire — couleur, lumière & récit',
+			location: 'Bordeaux, France',
+			cvButton: 'TÉLÉCHARGER LE CV',
 		},
 	},
 };

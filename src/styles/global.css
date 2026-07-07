@@ -26,21 +26,25 @@
   --cat-prd: var(--color-yellow);
   --cat-pho: var(--color-slate);
 
+  /* 鉍晶微光：僅限微交互觸發點使用（hover/active 的小面積點綴），禁作大面積背景 */
+  --calx-glint: linear-gradient(100deg, #ffd500 0%, #ff5c00 32%, #e4007c 66%, #1f3cff 100%);
+
   /* 空間與尺寸 */
   --space-sm: 0.5rem;
   --space-md: 1.5rem;
   --space-lg: 3rem;
   --space-xl: clamp(4.5rem, 12vh, 8rem);
-  --container-max-width: 1400px;
-  --gutter: clamp(8px, 1vw, 12px); /* 窄邊距：貼近海報式的滿版感 */
+  --container-max-width: 100%; /* 滿版畫布 */
+  --gutter: 8px; /* 恆定窄邊距 */
 
-  /* 字體 */
+  /* 字體：暫時全站統一 Helvetica Neue（特殊字體後續可替換接入） */
   --font-primary: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  --font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', 'IBM Plex Mono', Menlo, monospace;
+  --font-mono: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 
   /* 運動曲線 */
   --ease-oxide: cubic-bezier(0.25, 0.1, 0.25, 1); /* 氧化：緩慢偏移 */
   --ease-develop: cubic-bezier(0.22, 1, 0.36, 1); /* 顯影：快出緩停 */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* 彈簧：微過衝回彈 */
 }
 
 /* 2. 基礎 */
@@ -118,7 +122,7 @@ h3 {
 p,
 li {
   font-weight: 300;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.7;
   letter-spacing: 0.01em;
   margin-top: 0;
@@ -132,11 +136,12 @@ b {
 
 /* 5. 通用工具類 */
 
-/* 實驗室 metadata：等寬、全大寫、寬字距的客觀紀錄 */
+/* 實驗室 metadata：全大寫、寬字距的客觀紀錄（最小字號 13px = 10pt） */
 .metadata {
   font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.12em;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   opacity: 0.55;
 }
@@ -147,8 +152,9 @@ b {
   align-items: center;
   gap: 1.2rem;
   font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.14em;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   opacity: 0.65;
   margin-bottom: var(--space-md);

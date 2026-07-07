@@ -1,0 +1,152 @@
+---
+// 名片式聯繫頁主體：一張可懸停微傾的「名片」+ CV 下載。
+// CV 文件放在 public/cv/HE-Qianyu-CV.pdf（見 docs/how-to-add-media.md）。
+import { useTranslations, withBase, type Lang } from '@/i18n/utils';
+
+interface Props {
+	lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+---
+
+<div class="card-stage">
+	<article class="biz-card" data-cursor-label="SAY HI">
+		<span class="metadata card-tag">SCINTILLA — CONTACT</span>
+
+		<div class="card-core">
+			<h1 class="card-name">HE QIANYU</h1>
+			<p class="card-role">{t.contact.role}</p>
+		</div>
+
+		<div class="card-foot">
+			<a class="card-mail" href={`mailto:${t.contact.email.toLowerCase()}`}>{t.contact.email}</a>
+			<span class="metadata">{t.contact.location}</span>
+		</div>
+
+		<span class="card-swatch" aria-hidden="true"></span>
+	</article>
+
+	<div class="card-actions">
+		<a class="cv-btn" href={withBase('/cv/HE-Qianyu-CV.pdf')} download>
+			{t.contact.cvButton} ↓
+		</a>
+		<p class="card-note" set:html={t.contact.blurbHtml} />
+	</div>
+</div>
+
+<style>
+	.card-stage {
+		min-height: calc(100svh - 220px);
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		align-items: center;
+		gap: var(--space-lg);
+		padding: var(--space-lg) 0;
+	}
+
+	/* 名片：標準卡片比例，髮絲線邊框，懸停微傾（彈簧曲線） */
+	.biz-card {
+		position: relative;
+		width: min(560px, 92vw);
+		aspect-ratio: 17 / 10;
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		padding: clamp(1.2rem, 3vw, 2rem);
+		background: #fdfdfe;
+		border: 1px solid rgba(26, 26, 26, 0.18);
+		border-radius: 10px;
+		box-shadow: 0 18px 50px -30px rgba(26, 26, 26, 0.35);
+		transition: transform 0.5s var(--ease-spring);
+	}
+
+	.biz-card:hover {
+		transform: rotate(-1.2deg) translateY(-4px);
+	}
+
+	.card-tag {
+		opacity: 0.45;
+	}
+
+	.card-name {
+		font-size: clamp(1.8rem, 4.5vw, 2.6rem);
+		font-weight: 700;
+		letter-spacing: 0.01em;
+		margin: 0 0 0.4rem;
+	}
+
+	.card-role {
+		font-size: 15px;
+		color: var(--color-ink-soft);
+		margin: 0;
+	}
+
+	.card-foot {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+		flex-wrap: wrap;
+		gap: 0.5rem 1.5rem;
+	}
+
+	.card-mail {
+		font-size: clamp(0.95rem, 2.2vw, 1.15rem);
+		font-weight: 500;
+		letter-spacing: 0.03em;
+		transition: color 0.3s ease;
+	}
+
+	.card-mail:hover {
+		opacity: 1;
+		color: var(--color-magenta);
+	}
+
+	/* 洋紅色籤：名片右上角的一枚純色 */
+	.card-swatch {
+		position: absolute;
+		top: clamp(1.2rem, 3vw, 2rem);
+		right: clamp(1.2rem, 3vw, 2rem);
+		width: 16px;
+		height: 16px;
+		background: var(--color-magenta);
+	}
+
+	.card-actions {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.9rem;
+	}
+
+	/* CV 下載按鈕：墨黑實底，懸停翻洋紅 */
+	.cv-btn {
+		display: inline-block;
+		padding: 0.75rem 1.6rem;
+		border-radius: 8px;
+		background: var(--color-ink);
+		color: #f8f9fa;
+		font-size: 13px;
+		font-weight: 500;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		transition:
+			background 0.4s var(--ease-oxide),
+			transform 0.45s var(--ease-spring);
+	}
+
+	.cv-btn:hover {
+		opacity: 1;
+		background: var(--color-magenta);
+		transform: translateY(-2px);
+	}
+
+	.card-note {
+		font-size: 14px;
+		text-align: center;
+		color: var(--color-ink-soft);
+		margin: 0;
+	}
+</style>

@@ -1,5 +1,6 @@
 ---
 // 首頁主體內容，EN / FR 兩個頁面共用，文字全部來自 i18n 詞典。
+// 結構：Hero → 01 Profile（含簡版 CV）→ 02 Practice（三列：定位/領域/細分與作品）→ 03 Gallery
 import { getCollection } from 'astro:content';
 import { localizePath, useTranslations, type Lang } from '@/i18n/utils';
 
@@ -10,15 +11,16 @@ interface Props {
 const { lang } = Astro.props;
 const t = useTranslations(lang);
 
-// 精選作品：從 projects collection 取 featured 條目，按 order 排序，首頁最多展示 5 件
 const localePrefix = lang === 'FR' ? 'fr/' : 'en/';
-const allEntries = await getCollection('projects', ({ id }) => id.startsWith(localePrefix));
-const featured = allEntries
-	.filter((entry) => entry.data.featured)
-	.sort((a, b) => a.data.order - b.data.order)
-	.slice(0, 5);
+const allEntries = (await getCollection('projects', ({ id }) => id.startsWith(localePrefix))).sort(
+	(a, b) => a.data.order - b.data.order
+);
 const totalCount = allEntries.length;
 const year = new Date().getFullYear();
+
+const slugOf = (id: string) => id.replace(/^(en|fr)\//, '');
+const projectsFor = (cats: readonly string[]) =>
+	allEntries.filter((entry) => cats.includes(entry.data.category));
 ---
 
 <section class="hero-section">
@@ -46,80 +48,94 @@ const year = new Date().getFullYear();
 	<span class="section-label">01 / PROFILE</span>
 	<div class="intro-grid">
 		<p class="lead-text" set:html={t.home.introHtml} />
-		<div class="intro-side metadata">
-			<span>BASED IN BORDEAUX, FR</span>
-			<span>OPEN TO INTERNSHIPS</span>
-			<span>EN · FR · ZH · JP</span>
+		<div class="cv-panel">
+			<div class="cv-meta">
+				{t.home.cvMeta.map((line) => <span class="metadata">{line}</span>)}
+			</div>
+			<span class="metadata cv-label">EDUCATION</span>
+			<ul class="cv-list">
+				{t.home.cvEducation.map((line) => <li>{line}</li>)}
+			</ul>
+			<span class="metadata cv-label">SELECTED EXPERIENCE</span>
+			<ul class="cv-list">
+				{t.home.cvExperience.map((line) => <li>{line}</li>)}
+			</ul>
 		</div>
 	</div>
 </section>
 
-<section class="capabilities-section reveal">
-	<span class="section-label">02 / {t.home.capabilitiesLabel}</span>
-	<ul class="capabilities-list">
-		{
-			t.home.capabilities.map((item, i) => (
-				<li>
-					<span class="metadata cap-num">{String(i + 1).padStart(2, '0')}</span>
-					<span class="cap-name">{item}</span>
-				</li>
-			))
-		}
-	</ul>
-</section>
+<section class="practice-section reveal">
+	<span class="section-label">02 / {t.home.practiceLabel}</span>
+	<div class="practice-grid">
+		{/* 左列：整個實踐區的「大括號」——個人設計定位 */}
+		<div class="practice-intro">
+			<p class="practice-lead" set:html={t.home.practiceIntroHtml} />
+		</div>
 
-<section class="work-section reveal">
-	<span class="section-label">03 / {t.home.selectedLabel}</span>
-	<ol class="project-index">
-		{
-			featured.map((entry, i) => (
-				<li>
-					<a
-						href={localizePath(lang, `/project/${entry.id.replace(/^(en|fr)\//, '')}`)}
-						class="index-row"
-						data-slug={entry.id.replace(/^(en|fr)\//, '')}
-						data-cursor-label="VIEW"
-					>
-						<span class="metadata index-num">{String(i + 1).padStart(2, '0')}</span>
-						<span class="index-title">
-							<span class="index-swatch" data-cat={entry.data.category} aria-hidden="true"></span>
-							{entry.data.title}
-						</span>
-						<span class="metadata index-code">
-							{entry.data.code} · {entry.data.year}
-						</span>
-					</a>
-				</li>
-			))
-		}
-	</ol>
-
-	{/* 懸停預覽浮窗：游標移到作品名上時浮出對應的「光譜標本片」，
-	    待作品封面圖（cover 字段）就位後即替換為真實縮略圖 */}
-	<div class="index-preview" aria-hidden="true">
-		{
-			featured.map((entry) => (
-				<figure
-					class="preview-plate"
-					data-plate={entry.id.replace(/^(en|fr)\//, '')}
-					data-cat={entry.data.category}
-				>
-					<span class="metadata plate-code">{entry.data.code}</span>
-					<span class="plate-title">{entry.data.title}</span>
-				</figure>
-			))
-		}
+		{/* 中列 + 右列：三大領域及其細分作品 */}
+		<div class="practice-domains" data-preview-scope>
+			{
+				t.home.domains.map((domain) => (
+					<div class="domain-block">
+						<h2 class="domain-title">
+							{domain.cats.map((cat) => (
+								<span class="index-swatch" data-cat={cat} aria-hidden="true" />
+							))}
+							{domain.title}
+						</h2>
+						<div class="domain-body">
+							<p class="domain-blurb">{domain.blurb}</p>
+							<ol class="domain-projects">
+								{projectsFor(domain.cats).map((entry) => (
+									<li>
+										<a
+											href={localizePath(lang, `/project/${slugOf(entry.id)}`)}
+											class="index-row"
+											data-slug={slugOf(entry.id)}
+											data-cursor-label="VIEW"
+										>
+											<span class="index-title">{entry.data.title}</span>
+											<span class="metadata index-code">
+												{entry.data.code} · {entry.data.year}
+											</span>
+											<span class="index-arrow" aria-hidden="true">
+												↗
+											</span>
+										</a>
+									</li>
+								))}
+							</ol>
+							<a
+								class="metadata domain-more"
+								href={`${localizePath(lang, '/project')}?lens=${domain.lens}`}
+							>
+								ALL {domain.title} →
+							</a>
+						</div>
+					</div>
+				))
+			}
+		</div>
 	</div>
-	<a class="metadata archive-link" href={localizePath(lang, '/project')}>
-		FULL ARCHIVE ({String(totalCount).padStart(2, '0')}) →
-	</a>
 </section>
 
 <section class="gallery-section reveal">
-	<span class="section-label">04 / {t.home.galleryLabel}</span>
+	<span class="section-label">03 / {t.home.galleryLabel}</span>
 	<p class="gallery-text">{t.home.galleryText}</p>
 	<a href={localizePath(lang, '/gallery')} class="title-calx gallery-cta">{t.home.galleryCta}</a>
 </section>
+
+{/* 懸停預覽浮窗：游標移到作品名上時浮出對應的「標本片」 */}
+<div class="index-preview" aria-hidden="true">
+	{
+		allEntries.map((entry) => (
+			<figure class="preview-plate" data-plate={slugOf(entry.id)} data-cat={entry.data.category}>
+				<span class="metadata plate-code">{entry.data.code}</span>
+				<span class="plate-title">{entry.data.title}</span>
+			</figure>
+		))
+	}
+</div>
 
 <!-- hero 標題的「液態金屬」SVG 濾鏡（全頁僅此一份定義） -->
 <svg style="display: none;" aria-hidden="true">
@@ -146,7 +162,7 @@ const year = new Date().getFullYear();
 	/* --- 1. 首屏 (Hero) --- */
 	.hero-section {
 		position: relative;
-		min-height: calc(100svh - 60px); /* 扣除吸頂 header 高度 */
+		min-height: calc(100svh - 54px);
 		display: flex;
 		flex-direction: column;
 		justify-content: center;
@@ -176,7 +192,7 @@ const year = new Date().getFullYear();
 	}
 
 	.hero-title {
-		font-size: clamp(3.2rem, 13vw, 9.5rem);
+		font-size: clamp(3.4rem, 14vw, 11rem);
 		font-weight: 700;
 		line-height: 0.95;
 		letter-spacing: 0.02em;
@@ -220,123 +236,121 @@ const year = new Date().getFullYear();
 
 	/* --- 2. 概念句 --- */
 	.concept-intro {
-		max-width: 560px;
+		max-width: 640px;
 		margin: var(--space-xl) auto;
 		text-align: center;
 	}
 
 	.concept-intro p {
-		font-size: 16px;
+		font-size: 17px;
 		line-height: 1.7;
 		color: var(--color-ink-soft);
 	}
 
-	/* --- 3. 個人簡介：非對稱編輯網格 --- */
+	/* --- 3. Profile：大字自述 + 簡版 CV --- */
 	.intro-section {
 		margin-bottom: var(--space-xl);
 	}
 
 	.intro-grid {
 		display: grid;
-		grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
+		grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
 		gap: var(--space-lg);
 		align-items: start;
 	}
 
 	.lead-text {
-		font-size: clamp(1.4rem, 2.8vw, 2.1rem);
+		font-size: clamp(1.5rem, 3vw, 2.3rem);
 		line-height: 1.45;
 		letter-spacing: -0.01em;
 		font-weight: 300;
 		margin: 0;
 	}
 
-	.intro-side {
+	.cv-panel {
+		border-top: 1px solid var(--color-line);
+		padding-top: 0.8rem;
+	}
+
+	.cv-meta {
 		display: flex;
 		flex-direction: column;
-		gap: 0.6rem;
-		padding-top: 0.5rem;
-		border-top: 1px solid var(--color-line);
+		gap: 0.3rem;
+		margin-bottom: 1.4rem;
 	}
 
-	/* --- 4. 能力清單：滿版髮絲線列表 --- */
-	.capabilities-section {
+	.cv-label {
+		display: block;
+		margin-bottom: 0.5rem;
+		opacity: 0.45;
+	}
+
+	.cv-list {
+		list-style: none;
+		padding: 0;
+		margin: 0 0 1.4rem;
+	}
+
+	.cv-list li {
+		font-size: 14px;
+		line-height: 1.55;
+		padding: 0.4rem 0;
+		margin: 0;
+		border-top: 1px solid var(--color-line);
+		opacity: 0.88;
+	}
+
+	/* --- 4. Practice：三列融合（定位 / 領域 / 細分與作品）--- */
+	.practice-section {
 		margin-bottom: var(--space-xl);
 	}
 
-	.capabilities-list {
-		list-style: none;
-		padding: 0;
-		margin: 0;
-	}
-
-	.capabilities-list li {
-		display: flex;
-		align-items: baseline;
-		gap: 2rem;
-		padding: 1.1rem 0;
-		margin: 0;
-		border-top: 1px solid var(--color-line);
-		font-size: 16px;
-		transition:
-			color 0.4s var(--ease-oxide),
-			padding-left 0.4s var(--ease-oxide);
-	}
-
-	.capabilities-list li:last-child {
-		border-bottom: 1px solid var(--color-line);
-	}
-
-	/* 氧化微互動：懸停時文字緩慢偏向銅褐並輕微位移 */
-	.capabilities-list li:hover {
-		color: var(--color-copper);
-		padding-left: 0.6rem;
-	}
-
-	.cap-num {
-		flex-shrink: 0;
-	}
-
-	/* --- 5. 精選作品索引 --- */
-	.work-section {
-		margin-bottom: var(--space-xl);
-	}
-
-	.project-index {
-		list-style: none;
-		padding: 0;
-		margin: 0 0 var(--space-md);
-	}
-
-	.index-row {
-		position: relative;
+	.practice-grid {
 		display: grid;
-		grid-template-columns: 3.5rem minmax(0, 1fr) auto;
-		align-items: baseline;
-		gap: 1.5rem;
-		padding: 1.4rem 0;
+		grid-template-columns: minmax(0, 3fr) minmax(0, 8fr);
+		gap: var(--space-lg);
+		align-items: start;
+	}
+
+	/* 左列「大括號」：吸附跟隨整個區塊 */
+	.practice-intro {
+		position: sticky;
+		top: 90px;
+	}
+
+	.practice-lead {
+		font-size: clamp(1.15rem, 1.8vw, 1.5rem);
+		line-height: 1.5;
+		font-weight: 300;
+		margin: 0;
+		max-width: 34ch;
+	}
+
+	.domain-block {
+		display: grid;
+		grid-template-columns: minmax(0, 3fr) minmax(0, 5fr);
+		gap: var(--space-lg);
+		align-items: start;
 		border-top: 1px solid var(--color-line);
+		padding: 1.6rem 0 2.2rem;
 	}
 
-	.project-index li:last-child .index-row {
-		border-bottom: 1px solid var(--color-line);
-	}
-
-	.index-title {
+	.domain-title {
+		position: sticky;
+		top: 90px;
 		display: flex;
 		align-items: center;
-		gap: 0.9rem;
-		font-size: clamp(1.3rem, 3.2vw, 2rem);
-		font-weight: 400;
+		gap: 0.7rem;
+		font-size: clamp(1.5rem, 2.4vw, 2.1rem);
+		font-weight: 500;
 		letter-spacing: -0.01em;
-		transition: transform 0.5s var(--ease-oxide);
+		margin: 0;
 	}
 
-	/* 分類色籤：每行作品前的小純色方塊 */
 	.index-swatch {
 		flex-shrink: 0;
-		width: 11px;
-		height: 11px;
+		width: 12px;
+		height: 12px;
 	}
 	.index-swatch[data-cat='GRA'] {
 		background: var(--cat-gra);
@@ -352,6 +366,47 @@ const year = new Date().getFullYear();
 	}
 	.index-swatch[data-cat='PHO'] {
 		background: var(--cat-pho);
+	}
+
+	.domain-blurb {
+		font-size: 15px;
+		line-height: 1.7;
+		color: var(--color-ink-soft);
+		max-width: 52ch;
+		margin-bottom: 1.4rem;
+	}
+
+	/* 細分品項：作品行 */
+	.domain-projects {
+		list-style: none;
+		padding: 0;
+		margin: 0 0 1rem;
+	}
+
+	.index-row {
+		position: relative;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto auto;
+		align-items: baseline;
+		gap: 1.2rem;
+		padding: 1.1rem 0;
+		border-top: 1px solid var(--color-line);
+	}
+
+	.index-title {
+		font-size: clamp(1.25rem, 2.2vw, 1.7rem);
+		font-weight: 400;
+		letter-spacing: -0.01em;
+		transition: transform 0.45s var(--ease-spring);
+	}
+
+	.index-arrow {
+		font-size: 15px;
+		opacity: 0.4;
+		transition:
+			transform 0.45s var(--ease-spring),
+			opacity 0.3s ease,
+			color 0.3s ease;
 	}
 
 	/* 底部洋紅細線：hover 時從左向右展開 */
@@ -371,40 +426,64 @@ const year = new Date().getFullYear();
 	}
 
 	.index-row:hover .index-title {
-		transform: translateX(0.6rem);
+		transform: translateX(0.5rem);
+	}
+
+	.index-row:hover .index-arrow {
+		opacity: 1;
+		color: var(--color-magenta);
+		transform: translate(3px, -3px);
 	}
 
 	.index-row:hover::after {
 		width: 100%;
 	}
 
-	.archive-link {
+	.domain-more {
 		display: inline-block;
 		opacity: 0.55;
-		transition: opacity 0.3s ease;
+		transition:
+			opacity 0.3s ease,
+			color 0.3s ease;
 	}
 
-	.archive-link:hover {
+	.domain-more:hover {
 		opacity: 1;
+		color: var(--color-magenta);
 	}
 
-	/* --- 6. 個人畫廊入口 --- */
+	/* --- 5. 個人畫廊入口 --- */
 	.gallery-section {
 		padding-bottom: var(--space-lg);
 	}
 
 	.gallery-text {
-		font-size: 15px;
+		font-size: 16px;
 		color: var(--color-ink-soft);
 		margin-bottom: 1.2rem;
 	}
 
-	/* --- 懸停預覽浮窗（光譜標本片）--- */
+	.gallery-cta {
+		font-size: clamp(1.6rem, 4.5vw, 3rem);
+		font-weight: 600;
+		letter-spacing: 0.01em;
+		transition:
+			letter-spacing 0.6s var(--ease-oxide),
+			color 0.4s var(--ease-oxide);
+	}
+
+	.gallery-cta:hover {
+		opacity: 1;
+		letter-spacing: 0.05em;
+		color: var(--color-magenta);
+	}
+
+	/* --- 懸停預覽浮窗（標本片）--- */
 	.index-preview {
 		position: fixed;
 		top: 0;
 		left: 0;
-		width: clamp(220px, 24vw, 320px);
+		width: clamp(230px, 25vw, 340px);
 		aspect-ratio: 4 / 3;
 		z-index: 9500;
 		pointer-events: none;
@@ -434,7 +513,6 @@ const year = new Date().getFullYear();
 		opacity: 1;
 	}
 
-	/* 每個分類一個純色（真實封面圖就位前的「標本片」底色） */
 	.preview-plate[data-cat='GRA'] {
 		background: var(--cat-gra);
 	}
@@ -458,52 +536,43 @@ const year = new Date().getFullYear();
 	}
 
 	.plate-title {
-		font-size: 14px;
+		font-size: 16px;
 		font-weight: 500;
 		letter-spacing: 0.01em;
 	}
 
-	.gallery-cta {
-		font-size: clamp(1.5rem, 4.5vw, 2.8rem);
-		font-weight: 600;
-		letter-spacing: 0.01em;
-		transition:
-			letter-spacing 0.6s var(--ease-oxide),
-			color 0.4s var(--ease-oxide);
-	}
-
-	.gallery-cta:hover {
-		opacity: 1;
-		letter-spacing: 0.05em;
-		color: var(--color-magenta);
-	}
-
 	/* --- 響應式 --- */
-	@media (max-width: 768px) {
-		.intro-grid {
+	@media (max-width: 900px) {
+		.intro-grid,
+		.practice-grid,
+		.domain-block {
 			grid-template-columns: 1fr;
 		}
 
+		.practice-intro,
+		.domain-title {
+			position: static;
+		}
+
 		.index-row {
-			grid-template-columns: 2.5rem minmax(0, 1fr);
-			gap: 0.8rem 1rem;
+			grid-template-columns: minmax(0, 1fr) auto;
 		}
 
 		.index-code {
-			grid-column: 2;
+			grid-column: 1;
+			order: 3;
 		}
 
 		.corner.tr,
 		.corner.bl {
-			display: none; /* 手機端只保留對角兩枚，避免擁擠 */
+			display: none;
 		}
 	}
 </style>
 
 <script>
 	// hero 標題的「液態加熱」互動。
-	// 效能要點：SVG 濾鏡只在動畫期間掛載到元素上，靜止時完全卸下，
-	// 避免 feTurbulence 常駐渲染層造成的卡頓。
+	// 效能要點：SVG 濾鏡只在動畫期間掛載到元素上，靜止時完全卸下。
 	let animationFrameId: number;
 
 	function initHeroLiquid() {
@@ -516,8 +585,8 @@ const year = new Date().getFullYear();
 		if (!title || !turbulence || !displacement || prefersReducedMotion) return;
 
 		let phase = 0;
-		let currentScale = 0; // 當前扭曲強度
-		let targetScale = 0; // 目標扭曲強度
+		let currentScale = 0;
+		let targetScale = 0;
 
 		const animateLiquid = () => {
 			phase += 0.05;
@@ -525,11 +594,9 @@ const year = new Date().getFullYear();
 			const freqY = 0.015 + Math.sin(phase) * 0.005;
 			turbulence.setAttribute('baseFrequency', `${freqX} ${freqY}`);
 
-			// 線性插值 (Lerp)：當前值以 8% 的速度緩慢逼近目標值
 			currentScale += (targetScale - currentScale) * 0.08;
 			displacement.setAttribute('scale', currentScale.toString());
 
-			// 冷卻完成後卸下濾鏡並停止循環，歸還渲染資源
 			if (targetScale === 0 && currentScale < 0.1) {
 				currentScale = 0;
 				displacement.setAttribute('scale', '0');
@@ -543,7 +610,7 @@ const year = new Date().getFullYear();
 		};
 
 		title.addEventListener('mouseenter', () => {
-			targetScale = 12; // 加熱
+			targetScale = 12;
 			title.style.filter = 'url(#liquid-filter)';
 			title.style.willChange = 'filter, transform';
 			cancelAnimationFrame(animationFrameId);
@@ -552,7 +619,7 @@ const year = new Date().getFullYear();
 		});
 
 		title.addEventListener('mouseleave', () => {
-			targetScale = 0; // 冷卻：Lerp 自動處理緩降，降至閾值後卸下濾鏡
+			targetScale = 0;
 			title.style.transform = '';
 		});
 	}
@@ -563,8 +630,8 @@ const year = new Date().getFullYear();
 	function initIndexPreview() {
 		if (!window.matchMedia('(pointer: fine)').matches) return;
 		const wrap = document.querySelector('.index-preview');
-		const list = document.querySelector('.project-index');
-		if (!(wrap instanceof HTMLElement) || !list) return;
+		const scope = document.querySelector('[data-preview-scope]');
+		if (!(wrap instanceof HTMLElement) || !scope) return;
 
 		const plates = wrap.querySelectorAll('.preview-plate');
 		let x = 0;
@@ -585,37 +652,37 @@ const year = new Date().getFullYear();
 			if (!previewRafId) previewRafId = requestAnimationFrame(loop);
 		};
 
-		list.addEventListener(
+		scope.addEventListener(
 			'pointermove',
 			(e) => {
-				// 浮窗停靠在游標右上方，避免遮住正在讀的標題
-				targetX = e.clientX + 32;
-				targetY = e.clientY - wrap.offsetHeight - 24;
+				const pe = e as PointerEvent;
+				targetX = pe.clientX + 32;
+				targetY = pe.clientY - wrap.offsetHeight - 24;
 				wake();
 			},
 			{ passive: true }
 		);
 
-		list.addEventListener('pointerover', (e) => {
+		scope.addEventListener('pointerover', (e) => {
 			const row = e.target instanceof Element ? e.target.closest('.index-row') : null;
 			if (!row) return;
 			const slug = row.getAttribute('data-slug');
 			plates.forEach((p) => p.classList.toggle('active', p.getAttribute('data-plate') === slug));
 			if (!shown) {
 				shown = true;
-				x = targetX; // 首次出現直接落位，不做長距離飛行
+				x = targetX;
 				y = targetY;
 			}
 			wrap.classList.add('visible');
 		});
 
-		list.addEventListener('pointerleave', () => {
+		scope.addEventListener('pointerleave', () => {
 			wrap.classList.remove('visible');
 			shown = false;
 		});
 	}
 
-	// --- hero 滾動視差：核心層以較慢速率下沉並淡出，取景框保持不動 ---
+	// --- hero 滾動視差：核心層緩速下沉並淡出，取景框保持不動 ---
 	let parallaxRafId = 0;
 
 	function initHeroParallax() {
@@ -627,7 +694,7 @@ const year = new Date().getFullYear();
 			parallaxRafId = 0;
 			const scrolled = window.scrollY;
 			const vh = window.innerHeight;
-			if (scrolled > vh) return; // 離開首屏後不再計算
+			if (scrolled > vh) return;
 			const progress = scrolled / vh;
 			core.style.transform = `translateY(${(scrolled * 0.28).toFixed(1)}px)`;
 			core.style.opacity = Math.max(0, 1 - progress * 1.15).toFixed(3);
@@ -648,7 +715,6 @@ const year = new Date().getFullYear();
 		initHeroParallax();
 	});
 
-	// 換頁前停掉動畫循環，避免殘留的 rAF 引用舊頁面的元素
 	document.addEventListener('astro:before-swap', () => {
 		cancelAnimationFrame(animationFrameId);
 		cancelAnimationFrame(previewRafId);

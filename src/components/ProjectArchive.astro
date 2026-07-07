@@ -130,6 +130,7 @@ const categories = ['GRA', 'SCE', 'INS', 'PRD', 'PHO'] as const;
 
 <script>
 	// 分類篩選。astro:page-load 兼容首次載入與轉場後的重新綁定。
+	// 支持 ?lens=GRA 這類預篩選鏈接（首頁領域跳轉 / 求職投遞專用視角）。
 	function initProjectFilters() {
 		const grid = document.querySelector<HTMLElement>('[data-project-grid]');
 		if (!grid) return;
@@ -138,24 +139,33 @@ const categories = ['GRA', 'SCE', 'INS', 'PRD', 'PHO'] as const;
 		const label = document.querySelector('[data-filter-label]');
 		const cards = Array.from(grid.querySelectorAll<HTMLElement>('[data-category]'));
 
-		buttons.forEach((btn) => {
-			btn.addEventListener('click', () => {
-				const filter = btn.dataset.filter ?? 'ALL';
-				buttons.forEach((b) => b.classList.toggle('active', b === btn));
-				if (label) label.textContent = (btn.textContent ?? '').trim();
+		const applyFilter = (btn: HTMLButtonElement) => {
+			const filter = btn.dataset.filter ?? 'ALL';
+			buttons.forEach((b) => b.classList.toggle('active', b === btn));
+			if (label) label.textContent = (btn.textContent ?? '').trim();
 
-				cards.forEach((card) => {
-					const show = filter === 'ALL' || card.dataset.category === filter;
-					card.classList.toggle('is-hidden', !show);
-					if (show) {
-						// 重觸發顯影動畫，營造「重新校準光譜」的感覺
-						card.style.animation = 'none';
-						void card.offsetWidth;
-						card.style.animation = '';
-					}
-				});
+			cards.forEach((card) => {
+				const show = filter === 'ALL' || card.dataset.category === filter;
+				card.classList.toggle('is-hidden', !show);
+				if (show) {
+					// 重觸發顯影動畫，營造「重新校準光譜」的感覺
+					card.style.animation = 'none';
+					void card.offsetWidth;
+					card.style.animation = '';
+				}
 			});
+		};
+
+		buttons.forEach((btn) => {
+			btn.addEventListener('click', () => applyFilter(btn));
 		});
+
+		// URL 帶 lens 參數時，載入即校準到對應分類
+		const lens = new URLSearchParams(window.location.search).get('lens')?.toUpperCase();
+		if (lens) {
+			const target = buttons.find((b) => b.dataset.filter === lens);
+			if (target) applyFilter(target);
+		}
 	}
 
 	document.addEventListener('astro:page-load', initProjectFilters);

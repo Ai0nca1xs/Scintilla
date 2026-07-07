@@ -3,6 +3,23 @@ import { getLangFromUrl, getLangSwitchUrl, localizePath, useTranslations } from 
 
 const lang = getLangFromUrl(Astro.url);
 const t = useTranslations(lang);
+
+// 判斷當前所在的區塊，點亮對應的導覽膠囊
+const path = Astro.url.pathname;
+const section = path.includes('/project')
+	? 'project'
+	: path.includes('/gallery')
+		? 'gallery'
+		: path.includes('/contact')
+			? 'contact'
+			: 'home';
+
+const navItems = [
+	{ key: 'home', label: t.nav.home, href: localizePath(lang, '/') },
+	{ key: 'project', label: t.nav.project, href: localizePath(lang, '/project') },
+	{ key: 'gallery', label: t.nav.gallery, href: localizePath(lang, '/gallery') },
+	{ key: 'contact', label: t.nav.contact, href: localizePath(lang, '/contact') },
+];
 ---
 
 <header class="site-header">
@@ -25,17 +42,31 @@ const t = useTranslations(lang);
 			</div>
 
 			<ul class="nav-links">
-				<li><a href={localizePath(lang, '/')}>{t.nav.home}</a></li>
-				<li><a href={localizePath(lang, '/project')}>{t.nav.project}</a></li>
-				<li><a href={localizePath(lang, '/gallery')}>{t.nav.gallery}</a></li>
-				<li><a href={localizePath(lang, '/contact')}>{t.nav.contact}</a></li>
+				{
+					navItems.map((item) => (
+						<li>
+							<a
+								class:list={['nav-pill', { current: section === item.key }]}
+								href={item.href}
+								aria-current={section === item.key ? 'page' : undefined}
+							>
+								<span class="pill-roll">
+									<span class="pill-face front">{item.label}</span>
+									<span class="pill-face back" aria-hidden="true">
+										{item.label}
+									</span>
+								</span>
+							</a>
+						</li>
+					))
+				}
 			</ul>
 		</nav>
 	</div>
 </header>
 
 <style>
-	/* 1. 吸頂容器：半透明冷白 + 毛玻璃，滾動時內容從其下方「沉澱」離場 */
+	/* 1. 吸頂容器：半透明冷白 + 毛玻璃 */
 	.site-header {
 		position: sticky;
 		top: 0;
@@ -49,21 +80,19 @@ const t = useTranslations(lang);
 	.header-inner {
 		display: flex;
 		justify-content: space-between;
-		align-items: baseline;
+		align-items: center;
 		max-width: var(--container-max-width);
 		margin: 0 auto;
-		padding: 1rem var(--gutter);
+		padding: 0.7rem var(--gutter);
 	}
 
-	/* 2. 文字基礎設定：等寬 metadata 氣質 */
+	/* 2. 文字基礎設定 */
 	.site-header a,
 	.site-header span {
-		font-family: var(--font-mono);
-		font-size: 10px;
+		font-size: 13px;
 		font-weight: 400;
-		letter-spacing: 0.12em;
+		letter-spacing: 0.08em;
 		margin: 0;
-		line-height: 2;
 		text-transform: uppercase;
 	}
 
@@ -74,8 +103,8 @@ const t = useTranslations(lang);
 	/* 3. 右側導覽群組佈局 */
 	.nav-right {
 		display: flex;
-		align-items: baseline;
-		gap: 2.3rem;
+		align-items: center;
+		gap: 2rem;
 	}
 
 	/* 4. 語系切換 */
@@ -96,45 +125,79 @@ const t = useTranslations(lang);
 		opacity: 1;
 	}
 
-	/* 5. 導覽列與氧化互動邏輯 */
+	/* 5. 導覽膠囊：純色圓角塊 + 骰子滾動翻面 */
 	.nav-links {
 		display: flex;
 		list-style: none;
 		margin: 0;
 		padding: 0;
-		gap: 1.5rem;
+		gap: 0.5rem;
 	}
 
-	.nav-links a {
-		display: inline-block; /* 必須設定為 inline-block 才能讓 transform 縮放生效 */
-		opacity: 0.6;
-		transition: all 0.4s var(--ease-oxide);
-		transform-origin: center;
+	.nav-pill {
+		--half: 16px; /* 膠囊高度的一半，決定 3D 滾動的軸距 */
+		display: block;
+		perspective: 600px;
 	}
 
-	/* 觸發條件 A：游標懸停在整個導覽列上時，所有連結模糊、變暗、微縮 */
-	.nav-links:hover a {
-		filter: blur(1px);
-		opacity: 0.2;
-		transform: scale(0.95);
-	}
-
-	/* 觸發條件 B：被直接懸停的連結解除限制，點亮為洋紅 */
-	.nav-links a:hover {
-		filter: blur(0);
+	.nav-pill:hover {
 		opacity: 1;
-		transform: scale(1.12);
-		color: var(--color-magenta);
 	}
 
-	/* 手機端：站名縮短空間，導覽保持可點 */
-	@media (max-width: 640px) {
+	.pill-roll {
+		position: relative;
+		display: block;
+		transform-style: preserve-3d;
+		transition: transform 0.55s var(--ease-spring);
+	}
+
+	.pill-face {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0.45rem 1rem;
+		border-radius: 8px;
+		background: #e9ebee;
+		color: var(--color-ink);
+		white-space: nowrap;
+		backface-visibility: hidden;
+	}
+
+	.front {
+		transform: translateZ(var(--half));
+	}
+
+	/* 翻面：鉍晶微光只在互動觸發的一瞬出現（降級運用原則） */
+	.back {
+		position: absolute;
+		inset: 0;
+		transform: rotateX(-90deg) translateZ(var(--half));
+		background: var(--calx-glint);
+		color: #f8f9fa;
+	}
+
+	.nav-pill:hover .pill-roll {
+		transform: rotateX(90deg);
+	}
+
+	/* 當前區塊：墨黑實底反白 */
+	.nav-pill.current .front {
+		background: var(--color-ink);
+		color: #f8f9fa;
+	}
+
+	@media (max-width: 720px) {
 		.header-inner {
 			flex-wrap: wrap;
-			gap: 0.3rem;
+			gap: 0.4rem;
+			padding-top: 0.6rem;
+			padding-bottom: 0.6rem;
 		}
 		.nav-right {
-			gap: 1.4rem;
+			gap: 1.2rem;
+		}
+		.pill-face {
+			padding: 0.35rem 0.7rem;
 		}
 	}
 </style>
