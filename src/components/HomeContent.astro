@@ -2,6 +2,7 @@
 // 首頁主體內容，EN / FR 兩個頁面共用，文字全部來自 i18n 詞典。
 // 結構：Hero → 01 Profile（含簡版 CV）→ 02 Practice（三列：定位/領域/細分與作品）→ 03 Gallery
 import { getCollection } from 'astro:content';
+import SplashIntro from '@/components/SplashIntro.astro';
 import { localizePath, useTranslations, type Lang } from '@/i18n/utils';
 
 interface Props {
@@ -22,6 +23,8 @@ const slugOf = (id: string) => id.replace(/^(en|fr)\//, '');
 const projectsFor = (cats: readonly string[]) =>
 	allEntries.filter((entry) => cats.includes(entry.data.category));
 ---
+
+<SplashIntro />
 
 <section class="hero-section">
 	{/* 實驗室取景框：四角的標本檔案 metadata */}

@@ -5,11 +5,11 @@
 <span class="cursor-label metadata" transition:persist="cursor-label" aria-hidden="true"></span>
 
 <style is:global>
-	/* 只在 JS 確認啟用自訂游標後才隱藏系統游標，腳本失效時仍有游標可用 */
+	/* 只在 JS 確認啟用自訂游標後才全面隱藏系統游標（含連結、按鈕、文字光標），
+	   腳本失效時仍有系統游標可用 */
 	html.has-custom-cursor,
-	html.has-custom-cursor a,
-	html.has-custom-cursor button {
-		cursor: none;
+	html.has-custom-cursor * {
+		cursor: none !important;
 	}
 </style>
 
@@ -18,6 +18,7 @@
 		width: 10px;
 		height: 10px;
 		background-color: white; /* 設為白色以完美反轉所有背景 */
+		border: 1.5px solid transparent;
 		border-radius: 50%;
 		position: fixed;
 		left: 0;
@@ -26,8 +27,42 @@
 		z-index: 9999;
 		mix-blend-mode: difference; /* 反轉色核心屬性 */
 		opacity: 0; /* 初始隱藏，偵測到指針移動才顯示 */
-		transition: opacity 0.3s ease;
+		transition:
+			opacity 0.3s ease,
+			background-color 0.25s ease,
+			border-color 0.25s ease;
 		will-change: transform;
+	}
+
+	/* 模式：懸停可點元素時變成空心圓環 */
+	.cursor[data-mode='link'] {
+		background-color: transparent;
+		border-color: white;
+	}
+
+	/* 點擊漣漪：一圈白環快速擴散消散 */
+	.cursor::after {
+		content: '';
+		position: absolute;
+		inset: -3px;
+		border-radius: 50%;
+		border: 1.5px solid white;
+		opacity: 0;
+	}
+
+	.cursor.ping::after {
+		animation: cursor-ping 0.5s var(--ease-develop) forwards;
+	}
+
+	@keyframes cursor-ping {
+		from {
+			transform: scale(1);
+			opacity: 0.9;
+		}
+		to {
+			transform: scale(3.4);
+			opacity: 0;
+		}
 	}
 
 	/* 游標旁的標本標籤：懸停在作品上時顯示動作提示（如 VIEW） */
@@ -111,6 +146,10 @@
 		window.addEventListener('pointerdown', () => {
 			pressing = true;
 			updateScale();
+			// 重播點擊漣漪
+			cursor.classList.remove('ping');
+			void cursor.offsetWidth;
+			cursor.classList.add('ping');
 		});
 
 		window.addEventListener('pointerup', () => {
@@ -118,12 +157,13 @@
 			updateScale();
 		});
 
-		// 懸停在可點擊元素上時游標放大，作為統一的互動回饋；
-		// 帶 data-cursor-label 的元素會在游標旁顯示動作標籤（如 VIEW）
+		// 懸停在可點擊元素上時：游標放大並切換為空心圓環；
+		// 帶 data-cursor-label 的元素會在游標旁顯示動作標籤（如 VIEW / FLIP / DRAG）
 		document.addEventListener('mouseover', (e) => {
 			const el = e.target instanceof Element ? e.target : null;
-			hoveringLink = !!el?.closest('a, button');
+			hoveringLink = !!el?.closest('a, button, [role="button"]');
 			updateScale();
+			cursor.dataset.mode = hoveringLink ? 'link' : 'dot';
 
 			if (label instanceof HTMLElement) {
 				const tagged = el?.closest('[data-cursor-label]');

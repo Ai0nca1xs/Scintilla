@@ -1,0 +1,283 @@
+---
+// 無限畫布畫廊（Aragoza 式）：自由散置的縮略圖磚，四個方向無限循環，
+// 拖拽漫遊 + 慣性滑行 + 閒置緩慢漂移。
+// 磚面目前為純色佔位（標注真實的 Gallery 內容名目），
+// 素材就位後逐磚替換為圖片/音頻/文字卡。
+import { useTranslations, type Lang } from '@/i18n/utils';
+
+interface Props {
+	lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+
+// 基礎單元（design px）：所有磚散置在 1500×1080 的一格裡，四方向平鋪循環
+const CELL_W = 1500;
+const CELL_H = 1080;
+
+type Tile = {
+	code: string;
+	title: string;
+	note?: string;
+	tone: string;
+	ink?: string;
+	x: number;
+	y: number;
+	w: number;
+	h: number;
+	quote?: string;
+};
+
+const tiles: Tile[] = [
+	{ code: 'GAL-001', title: 'Simulacre', note: 'Collages, 2020–21', tone: 'var(--color-magenta)', x: 60, y: 90, w: 300, h: 390 },
+	{ code: 'GAL-002', title: 'Rythme', note: 'Laser × son, 2019–20', tone: '#0b0c0e', x: 440, y: 40, w: 260, h: 260 },
+	{ code: 'GAL-003', title: 'XX : XX', note: 'Lumière × objet, 2020', tone: 'var(--color-orange)', x: 790, y: 130, w: 220, h: 280 },
+	{ code: 'GAL-004', title: 'La rumeur', note: 'Photo × audio, 2026', tone: 'var(--color-slate)', x: 1100, y: 70, w: 320, h: 220 },
+	{
+		code: 'GAL-005',
+		title: 'Écrits',
+		tone: '#1a1a1a',
+		x: 120, y: 590, w: 380, h: 240,
+		quote: 'Le bonheur est comme l’eau, il coule, s’évapore, aucune goutte ne persiste pour toujours.',
+	},
+	{ code: 'GAL-006', title: 'Photographie', note: 'Errances, 2019–26', tone: 'var(--color-slate)', x: 590, y: 420, w: 280, h: 350 },
+	{ code: 'GAL-007', title: 'Audio', note: 'Field recordings', tone: 'var(--color-yellow)', ink: '#1a1a1a', x: 950, y: 490, w: 240, h: 160 },
+	{ code: 'GAL-008', title: 'Noctiluca', note: 'Lampe méduse — en cours', tone: 'var(--color-blue)', x: 1250, y: 400, w: 260, h: 210 },
+	{ code: 'GAL-009', title: 'Poèmes', tone: 'var(--color-magenta)', x: 320, y: 900, w: 210, h: 140 },
+	{ code: 'GAL-010', title: '⌮', note: 'Scintilla', tone: '#fdfdfe', ink: '#1a1a1a', x: 720, y: 850, w: 160, h: 160 },
+	{ code: 'GAL-011', title: 'KÉNOSE', note: 'Croquis d’univers', tone: '#0b0c0e', x: 1010, y: 760, w: 300, h: 190 },
+];
+
+// 3×3 平鋪，保證任意偏移下視口都有內容
+const copies = [...Array(9).keys()];
+---
+
+<header class="gallery-head">
+	<h1 class="title-calx">{t.gallery.heading}</h1>
+	<p class="metadata">DRAG TO WANDER — LOOPS IN ALL DIRECTIONS</p>
+</header>
+
+<div class="canvas-viewport" data-canvas-viewport data-cursor-label="DRAG">
+	<div class="canvas-world" data-canvas-world>
+		{
+			copies.map((i) => (
+				<div
+					class="world-cell"
+					style={`transform: translate(${(i % 3) * CELL_W}px, ${Math.floor(i / 3) * CELL_H}px)`}
+					aria-hidden={i === 4 ? undefined : 'true'}
+				>
+					{tiles.map((tile) => (
+						<figure
+							class="canvas-tile"
+							style={`left:${tile.x}px; top:${tile.y}px; width:${tile.w}px; height:${tile.h}px; --tone:${tile.tone}; --tile-ink:${tile.ink ?? '#f8f9fa'};`}
+						>
+							<span class="metadata tile-code">{tile.code}</span>
+							{tile.quote && <p class="tile-quote">{tile.quote}</p>}
+							<figcaption class="tile-caption">
+								<span class="tile-title">{tile.title}</span>
+								{tile.note && <span class="metadata tile-note">{tile.note}</span>}
+							</figcaption>
+						</figure>
+					))}
+				</div>
+			))
+		}
+	</div>
+</div>
+
+<style define:vars={{ cellW: `${CELL_W}px`, cellH: `${CELL_H}px` }}>
+	.gallery-head {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+		flex-wrap: wrap;
+		gap: 0.5rem 1.5rem;
+		margin: var(--space-md) 0;
+	}
+
+	.gallery-head h1 {
+		font-size: clamp(1.6rem, 3.5vw, 2.4rem);
+		font-weight: 600;
+	}
+
+	/* 視口：裁剪窗口，內部是無限平鋪的世界 */
+	.canvas-viewport {
+		position: relative;
+		height: max(480px, calc(100svh - 230px));
+		overflow: hidden;
+		border: 1px solid var(--color-line);
+		border-radius: 10px;
+		background: #eef0f2;
+		touch-action: none;
+		user-select: none;
+		-webkit-user-select: none;
+	}
+
+	.canvas-world {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: calc(var(--cellW) * 3);
+		height: calc(var(--cellH) * 3);
+		will-change: transform;
+	}
+
+	.world-cell {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: var(--cellW);
+		height: var(--cellH);
+	}
+
+	/* 標本磚：純色佔位，素材就位後換圖 */
+	.canvas-tile {
+		position: absolute;
+		margin: 0;
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		padding: 0.9rem 1rem;
+		background: var(--tone);
+		color: var(--tile-ink);
+		border-radius: 6px;
+		transition: transform 0.45s var(--ease-spring);
+	}
+
+	.canvas-tile:hover {
+		transform: translateY(-4px) scale(1.015);
+	}
+
+	.tile-code {
+		color: inherit;
+		opacity: 0.55;
+	}
+
+	.tile-quote {
+		font-size: 15px;
+		font-style: italic;
+		line-height: 1.6;
+		opacity: 0.92;
+		margin: 0;
+	}
+
+	.tile-caption {
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+	}
+
+	.tile-title {
+		font-size: 17px;
+		font-weight: 500;
+		letter-spacing: 0.01em;
+	}
+
+	.tile-note {
+		color: inherit;
+		opacity: 0.6;
+	}
+</style>
+
+<script>
+	// 無限循環拖拽：偏移對單元尺寸取模，世界永遠鋪滿視口。
+	// 慣性 + 閒置漂移都經 rAF 節流；減弱動效設置下兩者停用。
+	function initInfiniteCanvas() {
+		const viewport = document.querySelector<HTMLElement>('[data-canvas-viewport]');
+		const world = document.querySelector<HTMLElement>('[data-canvas-world]');
+		if (!viewport || !world) return;
+
+		const cellW = world.offsetWidth / 3;
+		const cellH = world.offsetHeight / 3;
+		const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+		let ox = -cellW * 0.3; // 初始偏移：讓第一屏就有錯落的磚
+		let oy = -cellH * 0.2;
+		let vx = reduced ? 0 : 0.25; // 閒置漂移速度
+		let vy = reduced ? 0 : 0.12;
+		let dragging = false;
+		let interacted = false;
+		let lastX = 0;
+		let lastY = 0;
+		let rafId = 0;
+
+		const mod = (v: number, size: number) => ((v % size) + size) % size;
+
+		const render = () => {
+			world.style.transform = `translate3d(${mod(ox, cellW) - cellW}px, ${mod(oy, cellH) - cellH}px, 0)`;
+		};
+
+		const loop = () => {
+			rafId = 0;
+			if (!dragging) {
+				ox += vx;
+				oy += vy;
+				if (interacted) {
+					vx *= 0.94; // 慣性衰減
+					vy *= 0.94;
+				}
+			}
+			render();
+			const coasting = Math.abs(vx) > 0.05 || Math.abs(vy) > 0.05;
+			if (dragging || coasting) wake();
+		};
+
+		const wake = () => {
+			if (!rafId) rafId = requestAnimationFrame(loop);
+		};
+
+		viewport.addEventListener('pointerdown', (e) => {
+			dragging = true;
+			interacted = true;
+			lastX = e.clientX;
+			lastY = e.clientY;
+			vx = 0;
+			vy = 0;
+			viewport.setPointerCapture(e.pointerId);
+			wake();
+		});
+
+		viewport.addEventListener('pointermove', (e) => {
+			if (!dragging) return;
+			const dx = e.clientX - lastX;
+			const dy = e.clientY - lastY;
+			lastX = e.clientX;
+			lastY = e.clientY;
+			ox += dx;
+			oy += dy;
+			vx = reduced ? 0 : dx; // 鬆手時的慣性來自最後一幀速度
+			vy = reduced ? 0 : dy;
+			wake();
+		});
+
+		const release = () => {
+			dragging = false;
+			wake();
+		};
+		viewport.addEventListener('pointerup', release);
+		viewport.addEventListener('pointercancel', release);
+
+		// 滾輪 / 觸控板：直接平移畫布
+		viewport.addEventListener(
+			'wheel',
+			(e) => {
+				e.preventDefault();
+				interacted = true;
+				ox -= e.deltaX;
+				oy -= e.deltaY;
+				render();
+			},
+			{ passive: false }
+		);
+
+		render();
+		wake();
+
+		document.addEventListener('astro:before-swap', () => cancelAnimationFrame(rafId), {
+			once: true,
+		});
+	}
+
+	document.addEventListener('astro:page-load', initInfiniteCanvas);
+</script>

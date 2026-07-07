@@ -1,6 +1,12 @@
 ---
-// 名片式聯繫頁主體：一張可懸停微傾的「名片」+ CV 下載。
+// 名片式聯繫頁主體：懸停微翹、點擊像卡牌一樣正反面翻轉。
+// 卡面圖片就位後自動替換：把設計好的圖放到
+//   src/assets/contact/card-front.(jpg|png)  正面
+//   src/assets/contact/card-back.(jpg|png)   背面
+// 找不到圖片時回退到目前的排版設計。
 // CV 文件放在 public/cv/HE-Qianyu-CV.pdf（見 docs/how-to-add-media.md）。
+import type { ImageMetadata } from 'astro';
+import { Image } from 'astro:assets';
 import { useTranslations, withBase, type Lang } from '@/i18n/utils';
 
 interface Props {
@@ -9,26 +15,66 @@ interface Props {
 
 const { lang } = Astro.props;
 const t = useTranslations(lang);
+
+const cardImages = import.meta.glob<{ default: ImageMetadata }>(
+	'/src/assets/contact/card-*.{jpg,jpeg,png,webp}',
+	{ eager: true }
+);
+const frontImg = Object.entries(cardImages).find(([path]) => path.includes('card-front'))?.[1]
+	?.default;
+const backImg = Object.entries(cardImages).find(([path]) => path.includes('card-back'))?.[1]
+	?.default;
 ---
 
 <div class="card-stage">
-	<article class="biz-card" data-cursor-label="SAY HI">
-		<span class="metadata card-tag">SCINTILLA — CONTACT</span>
+	<div class="card-scene">
+		<article
+			class="biz-card"
+			data-cursor-label="FLIP"
+			tabindex="0"
+			role="button"
+			aria-label="Flip the card"
+		>
+			<div class="card-face card-front">
+				{
+					frontImg ? (
+						<Image src={frontImg} alt="HE Qianyu — carte" class="card-img" width={1200} />
+					) : (
+						<>
+							<span class="metadata card-tag">SCINTILLA — CONTACT</span>
+							<div class="card-core">
+								<h1 class="card-name">HE QIANYU</h1>
+								<p class="card-role">{t.contact.role}</p>
+							</div>
+							<span class="metadata card-flip-hint">FLIP →</span>
+							<span class="card-swatch" aria-hidden="true" />
+						</>
+					)
+				}
+			</div>
 
-		<div class="card-core">
-			<h1 class="card-name">HE QIANYU</h1>
-			<p class="card-role">{t.contact.role}</p>
-		</div>
-
-		<div class="card-foot">
-			<a class="card-mail" href={`mailto:${t.contact.email.toLowerCase()}`}>{t.contact.email}</a>
-			<span class="metadata">{t.contact.location}</span>
-		</div>
-
-		<span class="card-swatch" aria-hidden="true"></span>
-	</article>
+			<div class="card-face card-back">
+				{
+					backImg ? (
+						<Image src={backImg} alt="HE Qianyu — carte (verso)" class="card-img" width={1200} />
+					) : (
+						<>
+							<span class="metadata card-tag back-tag">⌮ SPECIMEN N° 001 — DESIGNER</span>
+							<div class="card-core">
+								<span class="card-mailline">{t.contact.email}</span>
+								<span class="metadata back-meta">{t.contact.location}</span>
+								<span class="metadata back-meta">EN · FR · ZH · JP</span>
+							</div>
+							<span class="metadata card-flip-hint">← BACK</span>
+						</>
+					)
+				}
+			</div>
+		</article>
+	</div>
 
 	<div class="card-actions">
+		<a class="card-mail" href={`mailto:${t.contact.email.toLowerCase()}`}>{t.contact.email}</a>
 		<a class="cv-btn" href={withBase('/cv/HE-Qianyu-CV.pdf')} download>
 			{t.contact.cvButton} ↓
 		</a>
@@ -47,24 +93,62 @@ const t = useTranslations(lang);
 		padding: var(--space-lg) 0;
 	}
 
-	/* 名片：標準卡片比例，髮絲線邊框，懸停微傾（彈簧曲線） */
+	/* 3D 舞台：懸停微翹作用在 scene 上，翻轉作用在卡牌上，兩者互不打架 */
+	.card-scene {
+		perspective: 1400px;
+		transition: transform 0.5s var(--ease-spring);
+	}
+
+	.card-scene:hover {
+		transform: rotate(-1.2deg) translateY(-5px);
+	}
+
 	.biz-card {
 		position: relative;
 		width: min(560px, 92vw);
 		aspect-ratio: 17 / 10;
+		transform-style: preserve-3d;
+		transition: transform 0.85s var(--ease-spring);
+		cursor: none;
+	}
+
+	.biz-card.flipped {
+		transform: rotateY(180deg);
+	}
+
+	.card-face {
+		position: absolute;
+		inset: 0;
 		display: flex;
 		flex-direction: column;
 		justify-content: space-between;
 		padding: clamp(1.2rem, 3vw, 2rem);
 		background: #fdfdfe;
 		border: 1px solid rgba(26, 26, 26, 0.18);
-		border-radius: 10px;
+		border-radius: 12px;
 		box-shadow: 0 18px 50px -30px rgba(26, 26, 26, 0.35);
-		transition: transform 0.5s var(--ease-spring);
+		backface-visibility: hidden;
+		overflow: hidden;
 	}
 
-	.biz-card:hover {
-		transform: rotate(-1.2deg) translateY(-4px);
+	/* 背面：墨黑反白，像卡牌的花色面 */
+	.card-back {
+		transform: rotateY(180deg);
+		background: var(--color-ink);
+		color: #f8f9fa;
+	}
+
+	.card-back .metadata {
+		opacity: 0.6;
+	}
+
+	/* 卡面圖片模式：圖片鋪滿整張卡 */
+	.card-img {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
 	}
 
 	.card-tag {
@@ -84,27 +168,25 @@ const t = useTranslations(lang);
 		margin: 0;
 	}
 
-	.card-foot {
-		display: flex;
-		justify-content: space-between;
-		align-items: baseline;
-		flex-wrap: wrap;
-		gap: 0.5rem 1.5rem;
-	}
-
-	.card-mail {
-		font-size: clamp(0.95rem, 2.2vw, 1.15rem);
+	.card-mailline {
+		display: block;
+		font-size: clamp(1.1rem, 2.6vw, 1.5rem);
 		font-weight: 500;
 		letter-spacing: 0.03em;
-		transition: color 0.3s ease;
+		margin-bottom: 0.6rem;
 	}
 
-	.card-mail:hover {
-		opacity: 1;
-		color: var(--color-magenta);
+	.back-meta {
+		display: block;
+		margin-top: 0.2rem;
 	}
 
-	/* 洋紅色籤：名片右上角的一枚純色 */
+	.card-flip-hint {
+		opacity: 0.4;
+		align-self: flex-end;
+	}
+
+	/* 洋紅色籤：正面右上角的一枚純色 */
 	.card-swatch {
 		position: absolute;
 		top: clamp(1.2rem, 3vw, 2rem);
@@ -119,6 +201,18 @@ const t = useTranslations(lang);
 		flex-direction: column;
 		align-items: center;
 		gap: 0.9rem;
+	}
+
+	.card-mail {
+		font-size: clamp(1rem, 2.4vw, 1.25rem);
+		font-weight: 500;
+		letter-spacing: 0.03em;
+		transition: color 0.3s ease;
+	}
+
+	.card-mail:hover {
+		opacity: 1;
+		color: var(--color-magenta);
 	}
 
 	/* CV 下載按鈕：墨黑實底，懸停翻洋紅 */
@@ -150,3 +244,23 @@ const t = useTranslations(lang);
 		margin: 0;
 	}
 </style>
+
+<script>
+	// 卡牌翻轉：點擊 / Enter / 空格
+	function initCardFlip() {
+		const card = document.querySelector('.biz-card');
+		if (!(card instanceof HTMLElement)) return;
+
+		const flip = () => card.classList.toggle('flipped');
+
+		card.addEventListener('click', flip);
+		card.addEventListener('keydown', (e) => {
+			if (e.key === 'Enter' || e.key === ' ') {
+				e.preventDefault();
+				flip();
+			}
+		});
+	}
+
+	document.addEventListener('astro:page-load', initCardFlip);
+</script>

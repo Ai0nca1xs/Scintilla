@@ -35,7 +35,7 @@
   --space-lg: 3rem;
   --space-xl: clamp(4.5rem, 12vh, 8rem);
   --container-max-width: 100%; /* 滿版畫布 */
-  --gutter: 8px; /* 恆定窄邊距 */
+  --gutter: clamp(33px, 2.5vw, 40px); /* 頁邊距 ≈ 25–30pt */
 
   /* 字體：暫時全站統一 Helvetica Neue（特殊字體後續可替換接入） */
   --font-primary: 'Helvetica Neue', Helvetica, Arial, sans-serif;

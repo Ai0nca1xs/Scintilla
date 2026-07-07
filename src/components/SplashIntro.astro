@@ -1,0 +1,148 @@
+---
+// 開屏動畫：世界觀的展開。
+// 墨黑虛空中，煅燒光譜的流體隨游標攪動（WebGL 流體模擬，僅開屏期間運行），
+// 點擊任意處或約 3.5 秒後，畫面像相紙定影般「顯影」讓位給首頁。
+// 每個瀏覽會話只播放一次（sessionStorage），減弱動效設置下直接跳過。
+---
+
+<div class="splash" data-splash aria-hidden="true">
+	<div class="splash-fluid" data-splash-fluid></div>
+	<div class="splash-core">
+		<span class="splash-title">SCINTILLA<span class="splash-dot">.</span></span>
+		<span class="metadata splash-hint">CLICK TO DEVELOP</span>
+	</div>
+</div>
+
+<style>
+	.splash {
+		position: fixed;
+		inset: 0;
+		z-index: 9600;
+		background: #0b0c0e;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		transition:
+			opacity 1s var(--ease-develop),
+			filter 1s var(--ease-develop);
+	}
+
+	/* 顯影離場：亮度上浮、模糊消散 */
+	.splash.done {
+		opacity: 0;
+		filter: blur(10px);
+		pointer-events: none;
+	}
+
+	.splash-fluid,
+	.splash-fluid :global(canvas) {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+	}
+
+	.splash-core {
+		position: relative;
+		z-index: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 1.2rem;
+		pointer-events: none;
+		text-align: center;
+	}
+
+	.splash-title {
+		font-size: clamp(3rem, 11vw, 8.5rem);
+		font-weight: 700;
+		line-height: 0.95;
+		letter-spacing: 0.02em;
+		color: #f8f9fa;
+	}
+
+	.splash-dot {
+		color: var(--color-magenta);
+	}
+
+	.splash-hint {
+		color: #f8f9fa;
+		opacity: 0.5;
+		animation: splash-pulse 2.4s ease-in-out infinite;
+	}
+
+	@keyframes splash-pulse {
+		0%,
+		100% {
+			opacity: 0.5;
+		}
+		50% {
+			opacity: 0.9;
+		}
+	}
+</style>
+
+<script>
+	const SEEN_KEY = 'scintilla-splash-seen';
+
+	function initSplash() {
+		const splash = document.querySelector('[data-splash]');
+		if (!(splash instanceof HTMLElement)) return;
+
+		const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		if (sessionStorage.getItem(SEEN_KEY) || reduced) {
+			splash.remove();
+			return;
+		}
+
+		document.body.style.overflow = 'hidden';
+		let sim: { stop: () => void } | null = null;
+		let dismissed = false;
+
+		const dismiss = () => {
+			if (dismissed) return;
+			dismissed = true;
+			sessionStorage.setItem(SEEN_KEY, '1');
+			document.body.style.overflow = '';
+			splash.classList.add('done');
+			window.setTimeout(() => {
+				try {
+					sim?.stop();
+				} catch {
+					/* 模擬器已停止 */
+				}
+				splash.remove();
+			}, 1100);
+		};
+
+		// 流體模擬按需加載，失敗時開屏依然可用（純黑底 + 標題）
+		import('webgl-fluid-enhanced')
+			.then(({ default: WebGLFluidEnhanced }) => {
+				if (dismissed) return;
+				const container = splash.querySelector('[data-splash-fluid]');
+				if (!(container instanceof HTMLElement)) return;
+				const fluid = new WebGLFluidEnhanced(container);
+				fluid.setConfig({
+					colorPalette: ['#e4007c', '#ff5c00', '#1f3cff', '#ffd500'],
+					backgroundColor: '#0b0c0e',
+					transparent: false,
+					hover: true,
+					bloom: true,
+					densityDissipation: 2.2,
+					splatRadius: 0.22,
+					brightness: 0.6,
+				});
+				fluid.start();
+				fluid.multipleSplats(7);
+				sim = fluid;
+			})
+			.catch(() => {
+				/* WebGL 不可用時静默降級 */
+			});
+
+		splash.addEventListener('click', dismiss);
+		window.setTimeout(dismiss, 3600);
+	}
+
+	document.addEventListener('astro:page-load', initSplash);
+</script>
