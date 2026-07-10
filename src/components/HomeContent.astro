@@ -48,14 +48,14 @@ const projectsFor = (cats: readonly string[]) =>
 	<div class="metadata scroll-hint">SCROLL TO DEVELOP ↓</div>
 </section>
 
-<section class="concept-intro reveal">
-	<p>{t.home.concept}</p>
+<section class="concept-intro">
+	<p data-type-shuffle>{t.home.concept}</p>
 </section>
 
-<section class="intro-section reveal">
+<section class="intro-section">
 	<span class="section-label">01 / PROFILE</span>
 	<div class="intro-grid">
-		<p class="lead-text" set:html={t.home.introHtml} />
+		<p class="lead-text" data-text-motion set:html={t.home.introHtml} />
 		<div class="cv-panel">
 			<div class="cv-meta">
 				{t.home.cvMeta.map((line) => <span class="metadata">{line}</span>)}
@@ -72,12 +72,12 @@ const projectsFor = (cats: readonly string[]) =>
 	</div>
 </section>
 
-<section class="practice-section reveal">
+<section class="practice-section">
 	<span class="section-label">02 / {t.home.practiceLabel}</span>
 	<div class="practice-grid">
 		{/* 左列：整個實踐區的「大括號」——個人設計定位 */}
 		<div class="practice-intro">
-			<p class="practice-lead" set:html={t.home.practiceIntroHtml} />
+			<p class="practice-lead" data-text-motion set:html={t.home.practiceIntroHtml} />
 		</div>
 
 		{/* 中列 + 右列：三大領域及其細分作品 */}
@@ -92,7 +92,7 @@ const projectsFor = (cats: readonly string[]) =>
 							{domain.title}
 						</h2>
 						<div class="domain-body">
-							<p class="domain-blurb">{domain.blurb}</p>
+							<p class="domain-blurb" data-type-shuffle>{domain.blurb}</p>
 							<ol class="domain-projects">
 								{projectsFor(domain.cats).map((entry) => (
 									<li>
@@ -127,9 +127,9 @@ const projectsFor = (cats: readonly string[]) =>
 	</div>
 </section>
 
-<section class="gallery-section reveal">
+<section class="gallery-section">
 	<span class="section-label">03 / {t.home.galleryLabel}</span>
-	<p class="gallery-text">{t.home.galleryText}</p>
+	<p class="gallery-text" data-type-shuffle>{t.home.galleryText}</p>
 	<a href={localizePath(lang, '/gallery')} class="title-calx gallery-cta">{t.home.galleryCta}</a>
 </section>
 
@@ -355,16 +355,17 @@ const projectsFor = (cats: readonly string[]) =>
 		align-items: start;
 	}
 
+	/* 大字自述：視覺入口 → Roboto Mono，收緊字距 */
 	.lead-text {
+		font-family: var(--font-title);
 		font-size: clamp(1.5rem, 3vw, 2.3rem);
 		line-height: 1.45;
-		letter-spacing: -0.01em;
-		font-weight: 300;
+		letter-spacing: -0.02em;
+		font-weight: 400;
 		margin: 0;
 	}
 
 	.cv-panel {
-		border-top: 1px solid var(--color-line);
 		padding-top: 0.8rem;
 	}
 
@@ -392,7 +393,6 @@ const projectsFor = (cats: readonly string[]) =>
 		line-height: 1.55;
 		padding: 0.4rem 0;
 		margin: 0;
-		border-top: 1px solid var(--color-line);
 		opacity: 0.88;
 	}
 
@@ -415,9 +415,11 @@ const projectsFor = (cats: readonly string[]) =>
 	}
 
 	.practice-lead {
+		font-family: var(--font-title);
 		font-size: clamp(1.15rem, 1.8vw, 1.5rem);
 		line-height: 1.5;
-		font-weight: 300;
+		letter-spacing: -0.02em;
+		font-weight: 400;
 		margin: 0;
 		max-width: 34ch;
 	}
@@ -427,8 +429,7 @@ const projectsFor = (cats: readonly string[]) =>
 		grid-template-columns: minmax(0, 3fr) minmax(0, 5fr);
 		gap: var(--space-lg);
 		align-items: start;
-		border-top: 1px solid var(--color-line);
-		padding: 1.6rem 0 2.2rem;
+		padding: 2rem 0 2.6rem;
 	}
 
 	.domain-title {
@@ -439,7 +440,7 @@ const projectsFor = (cats: readonly string[]) =>
 		gap: 0.7rem;
 		font-size: clamp(1.5rem, 2.4vw, 2.1rem);
 		font-weight: 500;
-		letter-spacing: -0.01em;
+		letter-spacing: -0.02em;
 		margin: 0;
 	}
 
@@ -485,8 +486,7 @@ const projectsFor = (cats: readonly string[]) =>
 		grid-template-columns: minmax(0, 1fr) auto auto;
 		align-items: baseline;
 		gap: 1.2rem;
-		padding: 1.1rem 0;
-		border-top: 1px solid var(--color-line);
+		padding: 0.9rem 0;
 	}
 
 	.index-title {
@@ -505,7 +505,7 @@ const projectsFor = (cats: readonly string[]) =>
 			color 0.3s ease;
 	}
 
-	/* 底部洋紅細線：hover 時從左向右展開 */
+	/* 底部強調細線：hover 時從左向右展開（互動反饋，非結構線）*/
 	.index-row::after {
 		content: '';
 		position: absolute;
@@ -513,7 +513,7 @@ const projectsFor = (cats: readonly string[]) =>
 		bottom: -1px;
 		height: 1px;
 		width: 0%;
-		background: var(--color-magenta);
+		background: var(--color-accent);
 		transition: width 0.6s var(--ease-oxide);
 	}
 
@@ -527,7 +527,7 @@ const projectsFor = (cats: readonly string[]) =>
 
 	.index-row:hover .index-arrow {
 		opacity: 1;
-		color: var(--color-magenta);
+		color: var(--color-accent);
 		transform: translate(3px, -3px);
 	}
 
@@ -545,7 +545,7 @@ const projectsFor = (cats: readonly string[]) =>
 
 	.domain-more:hover {
 		opacity: 1;
-		color: var(--color-magenta);
+		color: var(--color-accent);
 	}
 
 	/* --- 5. 個人畫廊入口 --- */
@@ -560,9 +560,10 @@ const projectsFor = (cats: readonly string[]) =>
 	}
 
 	.gallery-cta {
+		font-family: var(--font-title);
 		font-size: clamp(1.6rem, 4.5vw, 3rem);
 		font-weight: 600;
-		letter-spacing: 0.01em;
+		letter-spacing: -0.02em;
 		transition:
 			letter-spacing 0.6s var(--ease-oxide),
 			color 0.4s var(--ease-oxide);
@@ -570,8 +571,8 @@ const projectsFor = (cats: readonly string[]) =>
 
 	.gallery-cta:hover {
 		opacity: 1;
-		letter-spacing: 0.05em;
-		color: var(--color-magenta);
+		letter-spacing: 0.02em;
+		color: var(--color-accent);
 	}
 
 	/* --- 懸停預覽浮窗（標本片）--- */

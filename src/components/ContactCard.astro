@@ -123,11 +123,10 @@ const backImg = Object.entries(cardImages).find(([path]) => path.includes('card-
 		flex-direction: column;
 		justify-content: space-between;
 		padding: clamp(1.2rem, 3vw, 2rem);
-		/* 液態玻璃卡面：半透明 + 背景模糊，透出底層光譜 */
+		/* 液態玻璃卡面：半透明 + 背景模糊，透出底層光譜（無框，投影界定體積）*/
 		background: rgba(253, 253, 254, 0.55);
 		-webkit-backdrop-filter: blur(20px) saturate(1.5);
 		backdrop-filter: blur(20px) saturate(1.5);
-		border: 1px solid rgba(255, 255, 255, 0.55);
 		border-radius: var(--radius-lg);
 		box-shadow: 0 18px 50px -30px rgba(26, 26, 26, 0.35);
 		backface-visibility: hidden;
@@ -189,14 +188,14 @@ const backImg = Object.entries(cardImages).find(([path]) => path.includes('card-
 		align-self: flex-end;
 	}
 
-	/* 洋紅色籤：正面右上角的一枚純色 */
+	/* 強調色籤：正面右上角的一枚純色 */
 	.card-swatch {
 		position: absolute;
 		top: clamp(1.2rem, 3vw, 2rem);
 		right: clamp(1.2rem, 3vw, 2rem);
 		width: 16px;
 		height: 16px;
-		background: var(--color-magenta);
+		background: var(--color-accent);
 	}
 
 	.card-actions {
@@ -215,7 +214,7 @@ const backImg = Object.entries(cardImages).find(([path]) => path.includes('card-
 
 	.card-mail:hover {
 		opacity: 1;
-		color: var(--color-magenta);
+		color: var(--color-accent);
 	}
 
 	/* CV 下載按鈕：墨黑實底，懸停翻洋紅 */
@@ -238,7 +237,7 @@ const backImg = Object.entries(cardImages).find(([path]) => path.includes('card-
 
 	.cv-btn:hover {
 		opacity: 1;
-		background: var(--color-magenta);
+		background: var(--color-accent);
 		transform: translateY(-2px);
 	}
 

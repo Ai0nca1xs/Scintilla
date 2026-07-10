@@ -12,12 +12,27 @@
   --color-line: rgba(26, 26, 26, 0.12); /* 髮絲線 */
   --color-copper: #b87333; /* 氧化銅褐：hover「升溫」的目標色 */
 
+  /* 文字色階：等寬系統裡由色階（而非字重）承擔主次分層 */
+  --text-primary: #1a1a1a;
+  --text-secondary: rgba(26, 26, 26, 0.7);
+  --text-muted: rgba(26, 26, 26, 0.45);
+
   /* 純色點綴系統（取自 Portfolio 2025 PDF 的版式用色，全站禁用漸變）*/
   --color-magenta: #e4007c; /* 目錄頁縮略圖色條 / 參考文獻頁底色 */
   --color-orange: #ff5c00; /* 十月一日海報 */
   --color-blue: #1f3cff; /* CV 頁的電光藍 */
   --color-yellow: #ffd500; /* CV 頁的亮黃 */
   --color-slate: #5b6b7f; /* Spectre 頁的青灰藍 */
+
+  /* 開屏色板（p5 軌道圓六色）：全站環境光與微交互的統一來源 */
+  --color-rose: #ffaad4;
+  --color-blush: #fdc5f5;
+  --color-mist: #b6e3e9;
+  --color-amber: #ffbe0b;
+  --color-flame: #fb5607;
+  --color-violet: #8338ec;
+  /* 交互強調色：hover / 展開線 / 可點暗示統一使用 */
+  --color-accent: var(--color-flame);
 
   /* 分類色：每個分類一個純色 */
   --cat-gra: var(--color-orange);
@@ -27,7 +42,7 @@
   --cat-pho: var(--color-slate);
 
   /* 鉍晶微光：僅限微交互觸發點使用（hover/active 的小面積點綴），禁作大面積背景 */
-  --calx-glint: linear-gradient(100deg, #ffd500 0%, #ff5c00 32%, #e4007c 66%, #1f3cff 100%);
+  --calx-glint: linear-gradient(100deg, #ffbe0b 0%, #fb5607 32%, #ffaad4 66%, #8338ec 100%);
 
   /* 空間與尺寸：全部 8px 倍數（8 / 16 / 24 / 48） */
   --space-xs: 8px;
@@ -38,14 +53,16 @@
   --container-max-width: 100%; /* 滿版畫布 */
   --gutter: clamp(16px, 2.5vw, 40px); /* 頁邊距：移動端 16px → 桌面 40px */
 
-  /* 圓角梯度（全局統一）：小模塊 8 / 卡片 12 / 大卡片 16 */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
+  /* 直角系統：全站不使用圓角 */
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
 
-  /* 字體：Inter（英文）優先，Helvetica Neue 回退；全站 ≤2 款 */
-  --font-primary: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  --font-mono: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  /* 雙等寬字體分工（全站 ≤2 款）：
+     Roboto Mono = 標題（幾何、棱角，視覺入口）；Space Mono = 正文與標籤（x-height 高，閱讀友好） */
+  --font-title: 'Roboto Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-primary: 'Space Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-mono: 'Space Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
   /* 運動曲線 */
   --ease-oxide: cubic-bezier(0.25, 0.1, 0.25, 1); /* 氧化：緩慢偏移 */
@@ -53,13 +70,13 @@
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* 彈簧：微過衝回彈 */
 }
 
-/* 2. 基礎 */
+/* 2. 基礎（Space Mono 只有 400/700 兩檔，主次靠色階拉開） */
 body {
   background-color: var(--color-bg);
-  color: var(--color-ink);
+  color: var(--text-primary);
   font-family: var(--font-primary);
-  font-weight: 300;
-  letter-spacing: 0.01em;
+  font-weight: 400;
+  letter-spacing: 0;
   margin: 0;
   padding: 0;
   -webkit-font-smoothing: antialiased;
@@ -67,8 +84,8 @@ body {
   overflow-wrap: break-word;
 }
 
-/* 站點光譜底氣：全站固定的極淡光譜暈，呼應 HeroField 色板，
-   讓玻璃表面透出淡色 → 液態玻璃質感 */
+/* 站點光譜底氣：全站固定的極淡光譜暈——與開屏軌道圓同一套色板，
+   開屏白光散去後，首頁像是殘留著同一場光的餘暈 */
 body::before {
   content: '';
   position: fixed;
@@ -76,19 +93,18 @@ body::before {
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(42% 52% at 15% 18%, rgba(228, 0, 124, 0.05), transparent 70%),
-    radial-gradient(46% 56% at 85% 14%, rgba(31, 60, 255, 0.045), transparent 70%),
-    radial-gradient(52% 52% at 72% 84%, rgba(255, 92, 0, 0.045), transparent 70%),
-    radial-gradient(42% 46% at 24% 90%, rgba(255, 213, 0, 0.05), transparent 70%),
-    radial-gradient(40% 44% at 55% 50%, rgba(53, 191, 183, 0.035), transparent 72%);
+    radial-gradient(42% 52% at 15% 18%, rgba(255, 170, 212, 0.09), transparent 70%),
+    radial-gradient(46% 56% at 85% 14%, rgba(182, 227, 233, 0.11), transparent 70%),
+    radial-gradient(52% 52% at 72% 84%, rgba(255, 190, 11, 0.06), transparent 70%),
+    radial-gradient(42% 46% at 24% 90%, rgba(253, 197, 245, 0.1), transparent 70%),
+    radial-gradient(40% 44% at 55% 50%, rgba(131, 56, 236, 0.04), transparent 72%);
 }
 
-/* 液態玻璃工具類：半透明 + 背景模糊 + 飽和提升，透出底層光譜 */
+/* 液態玻璃工具類：半透明 + 背景模糊 + 飽和提升，透出底層光譜（無框）*/
 .glass {
   background: rgba(248, 249, 250, 0.5);
   -webkit-backdrop-filter: blur(16px) saturate(1.4);
   backdrop-filter: blur(16px) saturate(1.4);
-  border: 1px solid rgba(255, 255, 255, 0.45);
 }
 
 /* 顯影劑顆粒：極低透明度的膠片噪點，給冷白背景一點物質感 */
@@ -109,7 +125,7 @@ body::after {
 }
 
 :focus-visible {
-  outline: 1px solid var(--color-copper);
+  outline: 1px solid var(--color-accent);
   outline-offset: 3px;
 }
 
@@ -126,11 +142,12 @@ a:hover {
   opacity: 0.7;
 }
 
-/* 4. 字體階層 */
+/* 4. 字體階層：標題一律 Roboto Mono；大號標題收緊字距（-0.02em）抵消等寬的鬆散感 */
 h1,
 h2,
 h3 {
   margin: 0;
+  font-family: var(--font-title);
   font-weight: 500;
 }
 
@@ -138,6 +155,7 @@ h3 {
 h1 {
   font-size: 22px;
   line-height: 1.2;
+  letter-spacing: -0.02em;
 }
 
 h2 {
@@ -155,17 +173,18 @@ h3 {
 
 p,
 li {
-  font-weight: 300;
+  font-weight: 400;
   font-size: 16px;
   line-height: 1.6;
-  letter-spacing: 0.01em;
+  letter-spacing: 0;
   margin-top: 0;
   margin-bottom: 8px;
+  color: var(--text-primary);
 }
 
 strong,
 b {
-  font-weight: 500;
+  font-weight: 700;
 }
 
 /* 5. 通用工具類 */
@@ -181,7 +200,13 @@ b {
   opacity: 0.6;
 }
 
-/* 區塊標籤：編號 + 髮絲延長線 */
+/* Scroll Text Motion：逐詞滾動顯現的詞單元（transform 需要 inline-block） */
+.tm-word {
+  display: inline-block;
+  will-change: transform, opacity, filter;
+}
+
+/* 區塊標籤：純編號文字，無延長線——以留白與字距標記段落 */
 .section-label {
   display: flex;
   align-items: center;
@@ -194,13 +219,6 @@ b {
   text-transform: uppercase;
   opacity: 0.65;
   margin-bottom: var(--space-md);
-}
-
-.section-label::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--color-line);
 }
 
 .page-header {
@@ -228,23 +246,8 @@ b {
   gap: 2rem;
 }
 
-/* 8. 滾動顯影 (Reveal on Scroll)
-   僅在 JS 可用時隱藏初始狀態，腳本失效時內容依然可見 */
-html.js .reveal {
-  opacity: 0;
-  transform: translateY(28px);
-  filter: blur(6px);
-  transition:
-    opacity 0.9s var(--ease-develop),
-    transform 0.9s var(--ease-develop),
-    filter 0.9s var(--ease-develop);
-}
-
-html.js .reveal.is-revealed {
-  opacity: 1;
-  transform: none;
-  filter: none;
-}
+/* 8.（已退役）滾動顯影 reveal 系統移除——文字載入動效統一由
+   text-motion.ts 的逐詞滾動顯現與字符翻牌解碼承擔 */
 
 /* 9. 頁面過渡動畫 (View Transitions) - 沉澱與顯影 */
 @keyframes precipitate {
@@ -279,13 +282,6 @@ html.js .reveal.is-revealed {
 
 /* 10. 動效偏好：尊重「減少動態效果」設定 */
 @media (prefers-reduced-motion: reduce) {
-  html.js .reveal {
-    opacity: 1;
-    transform: none;
-    filter: none;
-    transition: none;
-  }
-
   ::view-transition-old(root),
   ::view-transition-new(root) {
     animation: none;

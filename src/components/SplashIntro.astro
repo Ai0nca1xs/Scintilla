@@ -1,12 +1,14 @@
 ---
-// 開屏動畫：世界觀的展開（白底光感版）。
-// 與首頁 HeroField 同一套光譜雲氣著色器，白底之上以顏色表現光感；無文字。
-// 載入後中心白光逐漸放大鋪滿畫面，隨即淡出自動進入首頁——與首頁的光譜雲氣無縫銜接。
-// 每個瀏覽會話只播放一次（sessionStorage），減弱動效直接跳過。
+// 開屏動畫：白底彩色軌道圓（p5 移植版）。
+// 150 個彩色圓繞中心公轉、直徑呼吸脈動，白底上以 multiply 疊色呈水彩感，拖尾 + 整體柔焦。
+// 滾動驅動：滾輪 / 觸摸滑動累積進度 → 中心白光浮現並放大鋪滿 → 淡出載入首頁。
+// 點擊快進；每個瀏覽會話只播放一次（sessionStorage）；減弱動效直接跳過。
 ---
 
 <div class="splash" data-splash aria-hidden="true">
 	<canvas class="splash-canvas" data-splash-canvas></canvas>
+	<div class="splash-light" data-splash-light></div>
+	<div class="metadata splash-hint" data-splash-hint>SCROLL TO DEVELOP ↓</div>
 </div>
 
 <style>
@@ -15,6 +17,8 @@
 		inset: 0;
 		z-index: 9600;
 		background: #ffffff;
+		overflow: hidden;
+		touch-action: none;
 		transition: opacity 0.9s var(--ease-develop);
 	}
 	.splash.done {
@@ -26,125 +30,134 @@
 		inset: 0;
 		width: 100%;
 		height: 100%;
+		filter: blur(5px);
+	}
+	/* 中心白光：滾動進度驅動 scale，放大鋪滿全屏 */
+	.splash-light {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		width: 72vmax;
+		height: 72vmax;
+		border-radius: 50%;
+		background: radial-gradient(closest-side, #ffffff 0%, #ffffff 52%, rgba(255, 255, 255, 0) 100%);
+		transform: translate(-50%, -50%) scale(0);
+		opacity: 0;
+		will-change: transform, opacity;
+	}
+	.splash-hint {
+		position: absolute;
+		bottom: 1.6rem;
+		left: 50%;
+		transform: translateX(-50%);
+		opacity: 0.45;
+		animation: splash-hint-pulse 3.2s var(--ease-oxide) infinite;
+		transition: opacity 0.5s ease;
+	}
+	.splash-hint.hidden {
+		opacity: 0;
+	}
+	@keyframes splash-hint-pulse {
+		0%,
+		100% {
+			opacity: 0.45;
+		}
+		50% {
+			opacity: 0.8;
+		}
 	}
 </style>
 
 <script>
 	const SEEN_KEY = 'scintilla-splash-seen';
 
-	const FRAG = `
-precision highp float;
-uniform float u_t;
-uniform vec2 u_r;
-uniform float u_bloom;
+	// p5 原稿的六色色板
+	const PALETTE = ['#FFAAD4', '#FDC5F5', '#B6E3E9', '#FFBE0B', '#FB5607', '#8338EC'];
+	const SHAPES_NUM = 150;
+	const ALPHA = 80 / 255;
 
-// 液態金屬循環色板：靛藍 → 金 → 暗酒紅（循環）
-vec3 metal(float t){
-	t = fract(t);
-	vec3 indigo = vec3(0.16, 0.20, 0.52);
-	vec3 gold   = vec3(0.85, 0.66, 0.16);
-	vec3 wine   = vec3(0.36, 0.09, 0.17);
-	if (t < 0.3333) return mix(indigo, gold, t / 0.3333);
-	else if (t < 0.6666) return mix(gold, wine, (t - 0.3333) / 0.3333);
-	return mix(wine, indigo, (t - 0.6666) / 0.3334);
-}
+	type Shape = {
+		r: number;
+		maxD: number;
+		t: number;
+		tStep: number;
+		dt: number;
+		dStep: number;
+		color: string;
+	};
 
-mat2 rot(float a){ return mat2(cos(a), -sin(a), sin(a), cos(a)); }
+	const rand = (min: number, max: number) => min + Math.random() * (max - min);
 
-void main(){
-	// 中心化 + 等比 + 緩慢整體旋轉
-	vec2 pc = (gl_FragCoord.xy - 0.5 * u_r) / u_r.y;
-	vec2 p = rot(u_t * 0.05) * pc;
-
-	// —— XsXXDn「Creation」原始 fract 環狀折疊結構 ——
-	vec3 c;
-	float l, z = u_t;
-	for (int i = 0; i < 3; i++) {
-		vec2 pp = p;
-		vec2 uv = pp + 0.5;
-		z += 0.07;
-		l = length(pp);
-		uv += pp / l * (sin(z) + 1.0) * abs(sin(l * 9.0 - z - z));
-		c[i] = 0.01 / length(mod(uv, 1.0) - 0.5);
+	function hexToRgba(hex: string, alpha: number) {
+		const n = parseInt(hex.slice(1), 16);
+		return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 	}
-	float field = clamp((c.x + c.y + c.z) / 3.0 / max(l, 0.001), 0.0, 1.0);
 
-	// 階梯量化 → 清晰等高線色帶
-	const float BANDS = 6.0;
-	float q = floor(field * BANDS) / BANDS;
+	function makeShapes(w: number, h: number): Shape[] {
+		const shapes: Shape[] = [];
+		for (let i = 0; i < SHAPES_NUM; i++) {
+			const r = rand(0, Math.min(w, h) * 0.8);
+			shapes.push({
+				r,
+				maxD: rand(r * 0.3, r * 0.5),
+				t: rand(0, Math.PI * 2),
+				tStep: rand(0.1, 1) * (Math.PI / 180) * (Math.random() > 0.5 ? 1 : -1),
+				dt: rand(0, Math.PI * 2),
+				dStep: rand(1, 5) * (Math.PI / 180),
+				color: hexToRgba(PALETTE[Math.floor(Math.random() * PALETTE.length)], ALPHA),
+			});
+		}
+		return shapes;
+	}
 
-	// 液態金屬上色（場值 + 時間偏移循環）
-	vec3 metalCol = metal(q + u_t * 0.03);
+	function startOrbits(canvas: HTMLCanvasElement) {
+		const ctx = canvas.getContext('2d');
+		if (!ctx) return null;
 
-	// 白底合成：場強越高越顯金屬色，邊緣淡出保持通透
-	float vig = smoothstep(1.1, 0.15, length(pc));
-	float amt = clamp(field * 1.15 * vig, 0.0, 0.92);
-	vec3 col = mix(vec3(1.0), metalCol, amt);
+		// 半解析度渲染（CSS blur 已負責柔焦），控制 150 圓 + 拖尾的開銷
+		const SCALE = 0.5;
+		let w = 0;
+		let h = 0;
+		let shapes: Shape[] = [];
 
-	// 中心白光：bloom 增大時放大鋪滿全屏
-	float rr = 0.09 + u_bloom * 1.75;
-	float disc = smoothstep(rr, rr - 0.28, length(pc));
-	col = mix(col, vec3(1.0), disc);
-
-	gl_FragColor = vec4(col, 1.0);
-}`;
-
-	const VERT = `attribute vec2 a_pos; void main(){ gl_Position = vec4(a_pos, 0.0, 1.0); }`;
-
-	function startShader(canvas: HTMLCanvasElement) {
-		const gl = canvas.getContext('webgl', { antialias: false, alpha: false });
-		if (!gl) return null;
-		const compile = (type: number, src: string) => {
-			const s = gl.createShader(type)!;
-			gl.shaderSource(s, src);
-			gl.compileShader(s);
-			return s;
-		};
-		const program = gl.createProgram()!;
-		gl.attachShader(program, compile(gl.VERTEX_SHADER, VERT));
-		gl.attachShader(program, compile(gl.FRAGMENT_SHADER, FRAG));
-		gl.linkProgram(program);
-		if (!gl.getProgramParameter(program, gl.LINK_STATUS)) return null;
-		gl.useProgram(program);
-
-		const buf = gl.createBuffer();
-		gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-		const loc = gl.getAttribLocation(program, 'a_pos');
-		gl.enableVertexAttribArray(loc);
-		gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-
-		const uT = gl.getUniformLocation(program, 'u_t');
-		const uR = gl.getUniformLocation(program, 'u_r');
-		const uB = gl.getUniformLocation(program, 'u_bloom');
-
-		const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
 		const resize = () => {
-			canvas.width = Math.floor(canvas.clientWidth * dpr);
-			canvas.height = Math.floor(canvas.clientHeight * dpr);
-			gl.viewport(0, 0, canvas.width, canvas.height);
+			w = Math.max(1, Math.floor(canvas.clientWidth * SCALE));
+			h = Math.max(1, Math.floor(canvas.clientHeight * SCALE));
+			canvas.width = w;
+			canvas.height = h;
+			ctx.fillStyle = '#ffffff';
+			ctx.fillRect(0, 0, w, h);
+			shapes = makeShapes(w, h);
 		};
 		resize();
 		window.addEventListener('resize', resize);
 
 		let rafId = 0;
-		let bloom = 0;
-		let bloomTarget = 0;
-		const start = performance.now();
 		const frame = () => {
-			bloom += (bloomTarget - bloom) * 0.05;
-			gl.uniform1f(uT, (performance.now() - start) / 1000);
-			gl.uniform2f(uR, canvas.width, canvas.height);
-			gl.uniform1f(uB, bloom);
-			gl.drawArrays(gl.TRIANGLES, 0, 3);
+			// 白底拖尾：低透明白覆蓋上一幀（p5 background(0,5) 的白底版）
+			ctx.globalCompositeOperation = 'source-over';
+			ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+			ctx.fillRect(0, 0, w, h);
+
+			for (let i = 0; i < shapes.length; i++) {
+				const s = shapes[i];
+				// 前 1/3 直接疊色，其餘 multiply：白底上呈現水彩疊染
+				ctx.globalCompositeOperation = i < shapes.length / 3 ? 'source-over' : 'multiply';
+				const d = s.maxD * Math.abs(Math.sin(s.dt));
+				const x = s.r * Math.cos(s.t) + w / 2;
+				const y = s.r * Math.sin(s.t) + h / 2;
+				s.t += s.tStep;
+				s.dt += s.dStep;
+				ctx.fillStyle = s.color;
+				ctx.beginPath();
+				ctx.arc(x, y, d / 2, 0, Math.PI * 2);
+				ctx.fill();
+			}
 			rafId = requestAnimationFrame(frame);
 		};
 		frame();
 
 		return {
-			igniteBloom: () => {
-				bloomTarget = 1.15;
-			},
 			stop: () => {
 				cancelAnimationFrame(rafId);
 				window.removeEventListener('resize', resize);
@@ -163,30 +176,107 @@ void main(){
 		}
 
 		document.body.style.overflow = 'hidden';
+		// 暫停 Lenis：開屏期間滾輪只驅動白光，不滾動底下的頁面
+		(window as any).__lenis?.stop();
 		const canvas = splash.querySelector('[data-splash-canvas]');
-		const sim = canvas instanceof HTMLCanvasElement ? startShader(canvas) : null;
+		const light = splash.querySelector<HTMLElement>('[data-splash-light]');
+		const hint = splash.querySelector<HTMLElement>('[data-splash-hint]');
+		const sim = canvas instanceof HTMLCanvasElement ? startOrbits(canvas) : null;
 
+		// —— 滾動進度：0 → 1，白光從無到鋪滿 ——
+		let progress = 0;
+		let target = 0;
+		let lightRafId = 0;
 		let dismissed = false;
+
 		const dismiss = () => {
 			if (dismissed) return;
 			dismissed = true;
 			sessionStorage.setItem(SEEN_KEY, '1');
 			document.body.style.overflow = '';
+			// 回到頁首並恢復頁面滾動：白光散去後從 hero 開始
+			const lenis = (window as any).__lenis;
+			lenis?.scrollTo?.(0, { immediate: true });
+			window.scrollTo(0, 0);
+			lenis?.start?.();
 			splash.classList.add('done');
 			window.setTimeout(() => {
 				sim?.stop();
+				cancelAnimationFrame(lightRafId);
+				teardown();
 				splash.remove();
 			}, 950);
 		};
 
-		// 時序：光譜雲氣播放約 1.7s → 中心白光放大鋪滿約 1.1s → 淡出進入首頁
-		window.setTimeout(() => sim?.igniteBloom(), 1700);
-		window.setTimeout(dismiss, 2900);
-		// 允許點擊快進
-		splash.addEventListener('click', () => {
-			sim?.igniteBloom();
-			window.setTimeout(dismiss, 550);
-		});
+		const easeInOut = (x: number) => (x < 0.5 ? 2 * x * x : 1 - (-2 * x + 2) ** 2 / 2);
+
+		const lightFrame = () => {
+			lightRafId = 0;
+			progress += (target - progress) * 0.07;
+			if (light) {
+				const k = easeInOut(Math.min(progress, 1));
+				// scale 3.2 時 72vmax 的實心核心已覆蓋整屏
+				light.style.transform = `translate(-50%, -50%) scale(${(k * 3.2).toFixed(3)})`;
+				light.style.opacity = Math.min(1, progress * 2.5).toFixed(3);
+			}
+			if (progress > 0.02) hint?.classList.add('hidden');
+			if (progress >= 0.985) {
+				dismiss();
+				return;
+			}
+			if (Math.abs(target - progress) > 0.001) lightRafId = requestAnimationFrame(lightFrame);
+		};
+		const wakeLight = () => {
+			if (!lightRafId && !dismissed) lightRafId = requestAnimationFrame(lightFrame);
+		};
+
+		const advance = (delta: number) => {
+			target = Math.min(1, Math.max(0, target + delta));
+			wakeLight();
+		};
+
+		const onWheel = (e: WheelEvent) => {
+			e.preventDefault();
+			advance(e.deltaY / 900);
+		};
+		let touchY = 0;
+		const onTouchStart = (e: TouchEvent) => {
+			touchY = e.touches[0].clientY;
+		};
+		const onTouchMove = (e: TouchEvent) => {
+			e.preventDefault();
+			const y = e.touches[0].clientY;
+			advance((touchY - y) / 500);
+			touchY = y;
+		};
+		const onKey = (e: KeyboardEvent) => {
+			if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') advance(0.2);
+		};
+		// 點擊快進：白光直接放大進入
+		const onClick = () => advance(1);
+
+		window.addEventListener('wheel', onWheel, { passive: false });
+		window.addEventListener('touchstart', onTouchStart, { passive: true });
+		window.addEventListener('touchmove', onTouchMove, { passive: false });
+		window.addEventListener('keydown', onKey);
+		splash.addEventListener('click', onClick);
+
+		const teardown = () => {
+			window.removeEventListener('wheel', onWheel);
+			window.removeEventListener('touchstart', onTouchStart);
+			window.removeEventListener('touchmove', onTouchMove);
+			window.removeEventListener('keydown', onKey);
+		};
+
+		document.addEventListener(
+			'astro:before-swap',
+			() => {
+				sim?.stop();
+				cancelAnimationFrame(lightRafId);
+				teardown();
+			},
+			{ once: true }
+		);
 	}
 
 	document.addEventListener('astro:page-load', initSplash);

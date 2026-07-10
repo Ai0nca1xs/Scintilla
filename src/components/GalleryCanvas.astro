@@ -1,7 +1,12 @@
 ---
-// 無限畫布畫廊（Aragoza 式）：自由散置的縮略圖磚，四個方向無限循環，
-// 拖拽漫遊 + 慣性滑行 + 閒置緩慢漂移。點擊磚以 FLIP 手法放大居中查看詳情。
-// 磚面目前為純色佔位（標注真實的 Gallery 內容名目），素材就位後逐磚替換為圖片/音頻/文字卡。
+// 無限分層畫布 · 互動規則（嚴格遵循）：
+// ① 全域畫布平移：游標在視口內移動，整個網格持續向游標的「反方向」平移；
+//    以歸一化游標坐標驅動速度，配合逐磚取模回繞 → 四方向無縫無限循環。
+// ② 多層次視差：每塊磚由多個堆疊圖層構成（底板 / 編號 / 引文 / 說明文字），
+//    各圖層以遞進的深度係數平移，形成塊內 3D 視差。
+// ③ 3D 懸停傾斜：懸停時磚依游標在其包圍盒內的相對位置 rotateX / rotateY 傾斜。
+// ④ 插值與阻尼：平移、視差、傾斜全部經 lerp 平滑，經 rAF 驅動，帶自然拖尾延遲。
+// 磚面為純色佔位（標注真實 Gallery 內容），說明文字置於磚外（mono 10px 四行）。
 import { useTranslations, type Lang } from '@/i18n/utils';
 
 interface Props {
@@ -11,16 +16,16 @@ interface Props {
 const { lang } = Astro.props;
 const t = useTranslations(lang);
 
-// 基礎單元（design px）：所有磚散置在 1500×1080 的一格裡，四方向平鋪循環
+// 基礎單元（design px）：磚散置在 1500×1080 的一格裡，2×2 複製後逐磚回繞
 const CELL_W = 1500;
 const CELL_H = 1080;
 
 type Tile = {
 	code: string;
 	title: string;
-	note?: string;
-	date?: string;
-	desc?: string;
+	matiere: string; // 尺寸和材質行
+	desc: string; // 創作簡介行
+	date: string; // 創作年份行
 	tone: string;
 	ink?: string;
 	x: number;
@@ -31,70 +36,91 @@ type Tile = {
 };
 
 const tiles: Tile[] = [
-	{ code: 'GAL-001', title: 'Simulacre', note: 'Collage', date: '2020–21', tone: 'var(--color-magenta)', x: 60, y: 90, w: 300, h: 390, desc: 'Collages émotionnels reconstruits à partir de fragments de magazines — retenir ce qui s’efface.' },
-	{ code: 'GAL-002', title: 'Rythme', note: 'Laser × son', date: '2019–20', tone: '#0b0c0e', x: 440, y: 40, w: 260, h: 260, desc: 'Un faisceau laser réfracté par les vibrations sonores d’un haut-parleur.' },
-	{ code: 'GAL-003', title: 'XX : XX', note: 'Lumière × objet', date: '2020', tone: 'var(--color-orange)', x: 790, y: 130, w: 220, h: 280, desc: 'Étude d’illumination : superposition d’objets sous divers angles de lumière colorée.' },
-	{ code: 'GAL-004', title: 'La rumeur', note: 'Photo × audio', date: '2026', tone: 'var(--color-slate)', x: 1100, y: 70, w: 320, h: 220, desc: 'Création sur commande : échange de photographies et de sons entre camarades.' },
+	{ code: 'GAL-001', title: 'Simulacre', matiere: 'Collage — fragments de magazines', date: '2020–2021', tone: 'var(--color-magenta)', x: 60, y: 90, w: 300, h: 390, desc: 'Collages émotionnels reconstruits — retenir ce qui s’efface.' },
+	{ code: 'GAL-002', title: 'Rythme', matiere: 'Laser, haut-parleur, fumée', date: '2019–2020', tone: '#0b0c0e', x: 440, y: 40, w: 260, h: 260, desc: 'Un faisceau laser réfracté par les vibrations sonores.' },
+	{ code: 'GAL-003', title: 'XX : XX', matiere: 'Lumière colorée, objets', date: '2020', tone: 'var(--color-orange)', x: 790, y: 130, w: 220, h: 280, desc: 'Étude d’illumination : superpositions sous divers angles.' },
+	{ code: 'GAL-004', title: 'La rumeur', matiere: 'Photographie, enregistrements', date: '2026', tone: 'var(--color-slate)', x: 1100, y: 70, w: 320, h: 220, desc: 'Échange de photographies et de sons entre camarades.' },
 	{
 		code: 'GAL-005',
 		title: 'Écrits',
-		note: 'Poésie',
+		matiere: 'Poésie, textes courts',
 		date: '—',
 		tone: '#1a1a1a',
-		x: 120, y: 590, w: 380, h: 240,
+		x: 120, y: 600, w: 380, h: 240,
 		quote: 'Le bonheur est comme l’eau, il coule, s’évapore, aucune goutte ne persiste pour toujours.',
-		desc: 'Poèmes et textes courts — un journal de la pensée qui accompagne les projets.',
+		desc: 'Un journal de la pensée qui accompagne les projets.',
 	},
-	{ code: 'GAL-006', title: 'Photographie', note: 'Errances', date: '2019–26', tone: 'var(--color-slate)', x: 590, y: 420, w: 280, h: 350, desc: 'Observations quotidiennes, la lumière et la couleur comme carnet visuel.' },
-	{ code: 'GAL-007', title: 'Audio', note: 'Field recordings', date: '—', tone: 'var(--color-yellow)', ink: '#1a1a1a', x: 950, y: 490, w: 240, h: 160, desc: 'Enregistrements de terrain et partages sonores.' },
-	{ code: 'GAL-008', title: 'Noctiluca', note: 'Lampe méduse', date: 'en cours', tone: 'var(--color-blue)', x: 1250, y: 400, w: 260, h: 210, desc: 'Lampe portable inspirée de la méduse — squelette métallique, peau translucide.' },
-	{ code: 'GAL-009', title: 'Poèmes', note: 'Texte', date: '—', tone: 'var(--color-magenta)', x: 320, y: 900, w: 210, h: 140, desc: 'Fragments poétiques.' },
-	{ code: 'GAL-010', title: '⌮', note: 'Scintilla', date: '2026', tone: '#fdfdfe', ink: '#1a1a1a', x: 720, y: 850, w: 160, h: 160, desc: 'Le signe qui donne son nom à cet espace.' },
-	{ code: 'GAL-011', title: 'KÉNOSE', note: 'Croquis d’univers', date: '2026–27', tone: '#0b0c0e', x: 1010, y: 760, w: 300, h: 190, desc: 'Croquis et notes de l’univers en construction (projet de diplôme).' },
+	{ code: 'GAL-006', title: 'Photographie', matiere: 'Numérique, argentique', date: '2019–2026', tone: 'var(--color-slate)', x: 590, y: 420, w: 280, h: 350, desc: 'Errances quotidiennes, la lumière comme carnet visuel.' },
+	{ code: 'GAL-007', title: 'Audio', matiere: 'Field recordings', date: '—', tone: 'var(--color-yellow)', ink: '#1a1a1a', x: 950, y: 510, w: 240, h: 160, desc: 'Enregistrements de terrain et partages sonores.' },
+	{ code: 'GAL-008', title: 'Noctiluca', matiere: 'Métal, peau translucide', date: 'En cours', tone: 'var(--color-blue)', x: 1250, y: 400, w: 260, h: 210, desc: 'Lampe portable inspirée de la méduse.' },
+	{ code: 'GAL-009', title: 'Poèmes', matiere: 'Texte', date: '—', tone: 'var(--color-magenta)', x: 100, y: 930, w: 210, h: 140, desc: 'Fragments poétiques.' },
+	{ code: 'GAL-010', title: '⌮', matiere: 'Signe, identité', date: '2026', tone: '#fdfdfe', ink: '#1a1a1a', x: 720, y: 870, w: 160, h: 160, desc: 'Le signe qui donne son nom à cet espace.' },
+	{ code: 'GAL-011', title: 'KÉNOSE', matiere: 'Croquis, notes d’univers', date: '2026–2027', tone: '#0b0c0e', x: 1010, y: 760, w: 300, h: 190, desc: 'Univers en construction — projet de diplôme.' },
 ];
 
-// 3×3 平鋪，保證任意偏移下視口都有內容
-const copies = [...Array(9).keys()];
+// 每磚固定的視差 ease（0.5–1.0）：同一磚的複製份共享，回繞節奏才能對齊
+const easeOf = (i: number) => 0.5 + ((i * 37) % 23) / 46;
+
+// 2×2 平鋪複製
+const copies = [
+	{ cx: 0, cy: 0 },
+	{ cx: 1, cy: 0 },
+	{ cx: 0, cy: 1 },
+	{ cx: 1, cy: 1 },
+];
 ---
 
 <header class="gallery-head">
 	<h1 class="title-calx">{t.gallery.heading}</h1>
-	<p class="metadata">DRAG TO WANDER · CLICK TO OPEN · LOOPS IN ALL DIRECTIONS</p>
+	<p class="metadata">MOVE TO WANDER · CLICK TO OPEN · LOOPS IN ALL DIRECTIONS</p>
 </header>
 
-<div class="canvas-viewport" data-canvas-viewport data-cursor-label="DRAG">
-	<div class="canvas-world" data-canvas-world>
-		{
-			copies.map((i) => (
+<div class="canvas-viewport" data-canvas-viewport>
+	{
+		copies.map((copy, ci) =>
+			tiles.map((tile, ti) => (
 				<div
-					class="world-cell"
-					style={`transform: translate(${(i % 3) * CELL_W}px, ${Math.floor(i / 3) * CELL_H}px)`}
-					aria-hidden={i === 4 ? undefined : 'true'}
+					class="canvas-tile"
+					data-tile
+					data-code={tile.code}
+					data-title={tile.title}
+					data-matiere={tile.matiere}
+					data-date={tile.date}
+					data-desc={tile.desc}
+					data-quote={tile.quote ?? ''}
+					data-bx={tile.x}
+					data-by={tile.y}
+					data-cx={copy.cx}
+					data-cy={copy.cy}
+					data-ease={easeOf(ti).toFixed(3)}
+					aria-hidden={ci === 0 ? undefined : 'true'}
+					style={`width:${tile.w}px; --plate-h:${tile.h}px; --tone:${tile.tone}; --tile-ink:${tile.ink ?? '#f8f9fa'};`}
 				>
-					{tiles.map((tile) => (
-						<figure
-							class="canvas-tile"
-							data-tile
-							data-code={tile.code}
-							data-title={tile.title}
-							data-date={tile.date ?? ''}
-							data-note={tile.note ?? ''}
-							data-desc={tile.desc ?? ''}
-							data-quote={tile.quote ?? ''}
-							style={`left:${tile.x}px; top:${tile.y}px; width:${tile.w}px; height:${tile.h}px; --tone:${tile.tone}; --tile-ink:${tile.ink ?? '#f8f9fa'};`}
-						>
-							<span class="metadata tile-code">{tile.code}</span>
-							{tile.quote && <p class="tile-quote">{tile.quote}</p>}
-							<figcaption class="tile-caption">
-								<span class="tile-title">{tile.title}</span>
-								{tile.note && <span class="metadata tile-note">{tile.note}</span>}
-							</figcaption>
-						</figure>
-					))}
+					<div class="tile-intro">
+						{/* ③ 傾斜層：懸停 rotateX/rotateY */}
+						<div class="tile-tilt" data-tilt data-cursor-label="VIEW">
+							{/* ② 視差層 1：底板（最深、移動最少） */}
+							<div class="tile-plate" data-depth="0.35">
+								<span class="metadata tile-code" data-depth="0.75">{tile.code}</span>
+								{tile.quote && (
+									<p class="tile-quote" data-depth="0.55">
+										{tile.quote}
+									</p>
+								)}
+							</div>
+						</div>
+						{/* ② 視差層 2：磚外說明文字（最淺、移動最多）——標題 / 尺寸材質 / 簡介 / 年份 */}
+						<div class="tile-caption" data-depth="1">
+							<span class="cap-title">{tile.title}</span>
+							<span class="cap-line">{tile.matiere}</span>
+							<span class="cap-line">{tile.desc}</span>
+							<span class="cap-year">{tile.date}</span>
+						</div>
+					</div>
 				</div>
 			))
-		}
-	</div>
+		)
+	}
 </div>
 
 {/* FLIP 詳情層：點擊磚後放大居中，收合時反向動畫回原位 */}
@@ -107,14 +133,15 @@ const copies = [...Array(9).keys()];
 		</figure>
 		<div class="detail-meta" data-detail-meta>
 			<h2 class="detail-title" data-detail-title></h2>
-			<span class="metadata detail-date" data-detail-date></span>
+			<span class="detail-line" data-detail-matiere></span>
 			<p class="detail-desc" data-detail-desc></p>
+			<span class="detail-year" data-detail-date></span>
 			<button class="detail-close metadata" data-detail-close>CLOSE ✕</button>
 		</div>
 	</div>
 </div>
 
-<style define:vars={{ cellW: `${CELL_W}px`, cellH: `${CELL_H}px` }}>
+<style define:vars={{ cellW: `${CELL_W}`, cellH: `${CELL_H}` }}>
 	.gallery-head {
 		display: flex;
 		justify-content: space-between;
@@ -127,87 +154,101 @@ const copies = [...Array(9).keys()];
 	.gallery-head h1 {
 		font-size: clamp(1.6rem, 3.5vw, 2.4rem);
 		font-weight: 600;
+		letter-spacing: -0.02em;
 	}
 
-	/* 視口：裁剪窗口，內部是無限平鋪的世界 */
+	/* 視口：全出血、無邊框 */
 	.canvas-viewport {
 		position: relative;
-		height: max(480px, calc(100svh - 230px));
+		height: max(480px, calc(100svh - 210px));
+		margin-inline: calc(var(--gutter) * -1);
 		overflow: hidden;
-		border: 1px solid rgba(255, 255, 255, 0.5);
-		border-radius: var(--radius-md);
-		background: rgba(240, 242, 245, 0.45);
-		-webkit-backdrop-filter: blur(18px) saturate(1.4);
-		backdrop-filter: blur(18px) saturate(1.4);
 		touch-action: none;
 		user-select: none;
 		-webkit-user-select: none;
 	}
 
-	.canvas-world {
+	/* 定位殼：JS 逐幀 translate3d */
+	.canvas-tile {
 		position: absolute;
 		top: 0;
 		left: 0;
-		width: calc(var(--cellW) * 3);
-		height: calc(var(--cellH) * 3);
 		will-change: transform;
 	}
 
-	.world-cell {
-		position: absolute;
-		top: 0;
-		left: 0;
-		width: var(--cellW);
-		height: var(--cellH);
+	/* 入場殼 */
+	.tile-intro {
+		opacity: 0;
+		transform: scale(0.8);
+		transition:
+			opacity 0.9s var(--ease-develop),
+			transform 0.9s var(--ease-develop);
+	}
+	.tile-intro.in {
+		opacity: 1;
+		transform: none;
 	}
 
-	/* 標本磚：純色佔位，素材就位後換圖 */
-	.canvas-tile {
-		position: absolute;
-		margin: 0;
+	/* 傾斜殼：透視 + rotateX/Y（JS 驅動） */
+	.tile-tilt {
+		transform-style: preserve-3d;
+		will-change: transform;
+		cursor: pointer;
+	}
+
+	/* 底板：純色佔位（素材就位後換圖） */
+	.tile-plate {
+		position: relative;
+		height: var(--plate-h);
 		display: flex;
 		flex-direction: column;
 		justify-content: space-between;
 		padding: 12px 16px;
+		box-sizing: border-box;
 		background: var(--tone);
 		color: var(--tile-ink);
-		border-radius: var(--radius-sm);
-		cursor: pointer;
-		transition: transform 0.45s var(--ease-spring);
-	}
-
-	.canvas-tile:hover {
-		transform: translateY(-4px) scale(1.015);
+		will-change: transform;
 	}
 
 	.tile-code {
 		color: inherit;
 		opacity: 0.55;
+		will-change: transform;
 	}
 
 	.tile-quote {
-		font-size: 16px;
+		font-size: 14px;
 		font-style: italic;
 		line-height: 1.6;
 		opacity: 0.92;
 		margin: 0;
+		will-change: transform;
 	}
 
+	/* 磚外說明：mono 10px（≈8pt）四行，自動換行，色階分層 */
 	.tile-caption {
 		display: flex;
 		flex-direction: column;
 		gap: 2px;
+		margin-top: 8px;
+		font-family: var(--font-mono);
+		font-size: 10px;
+		line-height: 1.5;
+		letter-spacing: 0.02em;
+		will-change: transform;
 	}
 
-	.tile-title {
-		font-size: 18px;
-		font-weight: 500;
-		letter-spacing: 0.01em;
+	.cap-title {
+		font-weight: 700;
+		color: var(--text-primary);
 	}
 
-	.tile-note {
-		color: inherit;
-		opacity: 0.6;
+	.cap-line {
+		color: var(--text-secondary);
+	}
+
+	.cap-year {
+		color: var(--text-muted);
 	}
 
 	/* —— FLIP 詳情層 —— */
@@ -255,7 +296,6 @@ const copies = [...Array(9).keys()];
 		padding: 24px;
 		background: var(--tone, #1a1a1a);
 		color: var(--tile-ink, #f8f9fa);
-		border-radius: var(--radius-md);
 		box-shadow: 0 30px 80px -40px rgba(26, 26, 26, 0.5);
 		transform-origin: top left;
 		will-change: transform;
@@ -269,9 +309,11 @@ const copies = [...Array(9).keys()];
 		opacity: 0.92;
 	}
 
+	/* 詳情說明：與磚外說明同構的四行（標題 / 材質 / 簡介 / 年份） */
 	.detail-meta {
 		width: min(560px, 82vw);
 		pointer-events: auto;
+		font-family: var(--font-mono);
 	}
 	.detail-meta > * {
 		opacity: 0;
@@ -281,16 +323,19 @@ const copies = [...Array(9).keys()];
 		animation: meta-in 0.55s var(--ease-develop) forwards;
 	}
 	.gallery-detail.open .detail-title {
-		animation-delay: 0.12s;
+		animation-delay: 0.1s;
 	}
-	.gallery-detail.open .detail-date {
-		animation-delay: 0.2s;
+	.gallery-detail.open .detail-line {
+		animation-delay: 0.18s;
 	}
 	.gallery-detail.open .detail-desc {
-		animation-delay: 0.28s;
+		animation-delay: 0.26s;
+	}
+	.gallery-detail.open .detail-year {
+		animation-delay: 0.32s;
 	}
 	.gallery-detail.open .detail-close {
-		animation-delay: 0.36s;
+		animation-delay: 0.4s;
 	}
 
 	@keyframes meta-in {
@@ -303,42 +348,55 @@ const copies = [...Array(9).keys()];
 	.detail-title {
 		font-size: clamp(1.6rem, 4vw, 2.4rem);
 		font-weight: 600;
-		margin: 0 0 4px;
+		letter-spacing: -0.02em;
+		margin: 0 0 6px;
 	}
-	.detail-date {
+	.detail-line {
 		display: block;
-		margin-bottom: 12px;
+		font-size: 12px;
+		color: var(--text-secondary);
+		margin-bottom: 8px;
 	}
 	.detail-desc {
-		font-size: 16px;
+		font-size: 14px;
 		line-height: 1.6;
-		color: var(--color-ink-soft);
+		color: var(--text-secondary);
 		max-width: 52ch;
-		margin: 0 0 16px;
+		margin: 0 0 8px;
+	}
+	.detail-year {
+		display: block;
+		font-size: 12px;
+		color: var(--text-muted);
+		margin-bottom: 12px;
 	}
 	.detail-close {
 		display: inline-flex;
 		align-items: center;
 		min-height: 44px;
-		padding: 8px 16px;
-		border: 1px solid var(--color-line);
-		border-radius: var(--radius-sm);
+		padding: 8px 0;
+		border: none;
 		background: none;
 		cursor: pointer;
-		transition: all 0.3s var(--ease-oxide);
+		text-decoration: underline;
+		text-underline-offset: 6px;
+		transition: color 0.3s var(--ease-oxide);
 	}
 	.detail-close:hover {
-		color: var(--color-magenta);
-		border-color: var(--color-magenta);
+		color: var(--color-accent);
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.canvas-tile,
+		.tile-intro,
 		.detail-card,
 		.detail-backdrop,
 		.gallery-detail.open .detail-meta > * {
 			transition: none !important;
 			animation: none !important;
+		}
+		.tile-intro {
+			opacity: 1;
+			transform: none;
 		}
 		.gallery-detail.open .detail-meta > * {
 			opacity: 1;
@@ -348,64 +406,180 @@ const copies = [...Array(9).keys()];
 </style>
 
 <script>
-	// 無限循環拖拽 + FLIP 詳情。偏移對單元尺寸取模，世界永遠鋪滿視口。
+	// 互動核心：全域反向平移（速度場）＋逐磚回繞＋塊內多層視差＋3D 懸停傾斜，全部 lerp 阻尼。
 	function initInfiniteCanvas() {
 		const viewport = document.querySelector<HTMLElement>('[data-canvas-viewport]');
-		const world = document.querySelector<HTMLElement>('[data-canvas-world]');
-		if (!viewport || !world) return;
+		if (!viewport) return;
+		const els = Array.from(viewport.querySelectorAll<HTMLElement>('[data-tile]'));
+		if (!els.length) return;
 
-		const cellW = world.offsetWidth / 3;
-		const cellH = world.offsetHeight / 3;
+		const styles = getComputedStyle(viewport);
+		const DESIGN_W = parseFloat(styles.getPropertyValue('--cellW')) || 1500;
+		const DESIGN_H = parseFloat(styles.getPropertyValue('--cellH')) || 1080;
 		const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		const finePointer = window.matchMedia('(pointer: fine)').matches;
 
+		type Item = {
+			el: HTMLElement;
+			tilt: HTMLElement | null;
+			layers: { el: HTMLElement; depth: number }[];
+			bx: number;
+			by: number;
+			cx: number;
+			cy: number;
+			w: number;
+			h: number;
+			ease: number;
+			rx: number; // 當前傾斜（lerp 狀態）
+			ry: number;
+			trx: number; // 目標傾斜
+			try: number;
+		};
+		const items: Item[] = els.map((el) => ({
+			el,
+			tilt: el.querySelector<HTMLElement>('[data-tilt]'),
+			layers: Array.from(el.querySelectorAll<HTMLElement>('[data-depth]')).map((layer) => ({
+				el: layer,
+				depth: parseFloat(layer.dataset.depth ?? '1'),
+			})),
+			bx: parseFloat(el.dataset.bx ?? '0'),
+			by: parseFloat(el.dataset.by ?? '0'),
+			cx: parseInt(el.dataset.cx ?? '0', 10),
+			cy: parseInt(el.dataset.cy ?? '0', 10),
+			w: el.offsetWidth,
+			h: el.offsetHeight,
+			ease: reduced ? 1 : parseFloat(el.dataset.ease ?? '1'),
+			rx: 0,
+			ry: 0,
+			trx: 0,
+			try: 0,
+		}));
+		const maxW = Math.max(...items.map((i) => i.w)) + 40;
+		const maxH = Math.max(...items.map((i) => i.h)) + 60;
+
+		// 平鋪單元隨視口放大（位置等比擴散、磚尺寸不變），2×2 覆蓋任何屏幕
+		let cellW = DESIGN_W;
+		let cellH = DESIGN_H;
+		let posScaleX = 1;
+		let posScaleY = 1;
+		const measure = () => {
+			cellW = Math.max(DESIGN_W, (viewport.clientWidth + maxW) / 2 + 40);
+			cellH = Math.max(DESIGN_H, (viewport.clientHeight + maxH) / 2 + 40);
+			posScaleX = cellW / DESIGN_W;
+			posScaleY = cellH / DESIGN_H;
+		};
+		measure();
+		window.addEventListener('resize', measure);
+
+		// —— 狀態：全域偏移 + 歸一化游標（lerp 前後兩份）——
 		let ox = -cellW * 0.3;
 		let oy = -cellH * 0.2;
-		let vx = reduced ? 0 : 0.25;
-		let vy = reduced ? 0 : 0.12;
-		let dragging = false;
-		let interacted = false;
-		let paused = false; // 詳情打開時暫停漂移
-		let moved = 0; // 拖拽位移量：用於區分點擊 vs 拖拽
-		let lastX = 0;
-		let lastY = 0;
+		let nxT = 0.5; // 歸一化游標目標（0–1）
+		let nyT = 0.5;
+		let nx = 0.5; // lerp 後的游標
+		let ny = 0.5;
+		let inside = false;
+		let paused = false;
+		let hovered: Item | null = null;
 		let rafId = 0;
 
+		// 觸屏回退：保留拖拽平移
+		let dragging = false;
+		let lastX = 0;
+		let lastY = 0;
+		let moved = 0;
+
+		const MAX_SPEED = 5; // 游標貼邊時的每幀平移速度（px）
+		const PARALLAX = 26; // 塊內視差最大位移（px）
+		const TILT = 9; // 最大傾斜角（deg）
+
 		const mod = (v: number, size: number) => ((v % size) + size) % size;
+
 		const render = () => {
-			world.style.transform = `translate3d(${mod(ox, cellW) - cellW}px, ${mod(oy, cellH) - cellH}px, 0)`;
+			const totalW = cellW * 2;
+			const totalH = cellH * 2;
+			const lpx = (nx - 0.5) * PARALLAX;
+			const lpy = (ny - 0.5) * PARALLAX * 0.7;
+			for (const it of items) {
+				const x = it.bx * posScaleX + it.cx * cellW + ox * it.ease;
+				const y = it.by * posScaleY + it.cy * cellH + oy * it.ease;
+				const wx = mod(x + maxW, totalW) - maxW;
+				const wy = mod(y + maxH, totalH) - maxH;
+				it.el.style.transform = `translate3d(${wx.toFixed(2)}px, ${wy.toFixed(2)}px, 0)`;
+
+				// 塊內多層視差：各層依深度係數反向移動
+				if (!reduced) {
+					for (const layer of it.layers) {
+						layer.el.style.transform = `translate3d(${(-lpx * layer.depth).toFixed(2)}px, ${(-lpy * layer.depth).toFixed(2)}px, 0)`;
+					}
+				}
+
+				// 3D 傾斜 lerp
+				it.rx += (it.trx - it.rx) * 0.12;
+				it.ry += (it.try - it.ry) * 0.12;
+				if (it.tilt) {
+					if (Math.abs(it.rx) > 0.01 || Math.abs(it.ry) > 0.01) {
+						it.tilt.style.transform = `perspective(720px) rotateX(${it.rx.toFixed(2)}deg) rotateY(${it.ry.toFixed(2)}deg)`;
+					} else if (it.tilt.style.transform) {
+						it.tilt.style.transform = '';
+					}
+				}
+			}
 		};
 
 		const loop = () => {
 			rafId = 0;
-			if (!dragging && !paused) {
-				ox += vx;
-				oy += vy;
-				if (interacted) {
-					vx *= 0.94;
-					vy *= 0.94;
-				}
+			if (paused) return;
+			// 游標 lerp（阻尼拖尾）
+			nx += (nxT - nx) * 0.06;
+			ny += (nyT - ny) * 0.06;
+			// ① 全域反向平移：游標偏離中心 → 網格持續向反方向滑動
+			if (!reduced && finePointer) {
+				ox -= (nx - 0.5) * MAX_SPEED;
+				oy -= (ny - 0.5) * MAX_SPEED * 0.72;
 			}
 			render();
-			const coasting = Math.abs(vx) > 0.05 || Math.abs(vy) > 0.05;
-			if (!paused && (dragging || coasting)) wake();
+			const tiltBusy = items.some(
+				(it) => Math.abs(it.trx - it.rx) > 0.02 || Math.abs(it.try - it.ry) > 0.02
+			);
+			const panBusy = inside || Math.abs(nx - 0.5) > 0.004 || Math.abs(ny - 0.5) > 0.004;
+			if (panBusy || tiltBusy || dragging) wake();
 		};
 		const wake = () => {
 			if (!rafId && !paused) rafId = requestAnimationFrame(loop);
 		};
 
-		viewport.addEventListener('pointerdown', (e) => {
-			if (paused) return;
-			dragging = true;
-			interacted = true;
-			moved = 0;
-			lastX = e.clientX;
-			lastY = e.clientY;
-			vx = 0;
-			vy = 0;
-			viewport.setPointerCapture(e.pointerId);
+		// —— 游標追蹤：歸一化視口坐標 + 塊內相對位置 → 傾斜目標 ——
+		viewport.addEventListener('pointerenter', (e) => {
+			if (e.pointerType !== 'mouse') return;
+			inside = true;
 			wake();
 		});
 		viewport.addEventListener('pointermove', (e) => {
+			if (e.pointerType === 'mouse') {
+				const r = viewport.getBoundingClientRect();
+				nxT = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+				nyT = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
+				// ③ 傾斜：找到游標下的磚，依包圍盒內相對位置定目標角
+				const tiltEl = (e.target as Element)?.closest?.('[data-tilt]');
+				const tileEl = tiltEl?.closest<HTMLElement>('[data-tile]');
+				const it = items.find((i) => i.el === tileEl) ?? null;
+				if (hovered && hovered !== it) {
+					hovered.trx = 0;
+					hovered.try = 0;
+				}
+				hovered = it;
+				if (it && !reduced) {
+					const pr = (tiltEl as HTMLElement).getBoundingClientRect();
+					const relX = (e.clientX - pr.left) / pr.width;
+					const relY = (e.clientY - pr.top) / pr.height;
+					it.trx = (0.5 - relY) * TILT;
+					it.try = (relX - 0.5) * TILT;
+				}
+				wake();
+				return;
+			}
+			// 觸屏：拖拽平移
 			if (!dragging) return;
 			const dx = e.clientX - lastX;
 			const dy = e.clientY - lastY;
@@ -414,29 +588,58 @@ const copies = [...Array(9).keys()];
 			moved += Math.abs(dx) + Math.abs(dy);
 			ox += dx;
 			oy += dy;
-			vx = reduced ? 0 : dx;
-			vy = reduced ? 0 : dy;
+			render();
+		});
+		viewport.addEventListener('pointerleave', (e) => {
+			if (e.pointerType !== 'mouse') return;
+			inside = false;
+			nxT = 0.5; // 游標離開 → 平移速度緩緩歸零
+			nyT = 0.5;
+			if (hovered) {
+				hovered.trx = 0;
+				hovered.try = 0;
+				hovered = null;
+			}
 			wake();
+		});
+		viewport.addEventListener('pointerdown', (e) => {
+			if (e.pointerType === 'mouse' || paused) return;
+			dragging = true;
+			moved = 0;
+			lastX = e.clientX;
+			lastY = e.clientY;
 		});
 		const release = () => {
 			dragging = false;
-			wake();
 		};
 		viewport.addEventListener('pointerup', release);
 		viewport.addEventListener('pointercancel', release);
 
-		viewport.addEventListener(
-			'wheel',
-			(e) => {
-				if (paused) return;
-				e.preventDefault();
-				interacted = true;
-				ox -= e.deltaX;
-				oy -= e.deltaY;
-				render();
-			},
-			{ passive: false }
-		);
+		// —— 開場：可見磚由畫面中心向外 stagger 入場 ——
+		render();
+		const vw = viewport.clientWidth;
+		const vh = viewport.clientHeight;
+		const vr = viewport.getBoundingClientRect();
+		const byDistance = items
+			.map((it) => {
+				const r = it.el.getBoundingClientRect();
+				const dx = r.left - vr.left + r.width / 2 - vw / 2;
+				const dy = r.top - vr.top + r.height / 2 - vh / 2;
+				return { it, d: Math.hypot(dx, dy) };
+			})
+			.sort((a, b) => a.d - b.d);
+		byDistance.forEach(({ it }, i) => {
+			const intro = it.el.querySelector<HTMLElement>('.tile-intro');
+			if (intro) intro.style.transitionDelay = `${Math.min(i * 45, 900)}ms`;
+		});
+		requestAnimationFrame(() => {
+			viewport.querySelectorAll<HTMLElement>('.tile-intro').forEach((intro) => intro.classList.add('in'));
+		});
+		window.setTimeout(() => {
+			viewport.querySelectorAll<HTMLElement>('.tile-intro').forEach((intro) => {
+				intro.style.transitionDelay = '';
+			});
+		}, 1400);
 
 		// —— FLIP 詳情 ——
 		const detail = document.querySelector<HTMLElement>('[data-detail]');
@@ -446,10 +649,12 @@ const copies = [...Array(9).keys()];
 		const elCode = document.querySelector<HTMLElement>('[data-detail-code]');
 		const elQuote = document.querySelector<HTMLElement>('[data-detail-quote]');
 		const elTitle = document.querySelector<HTMLElement>('[data-detail-title]');
+		const elMatiere = document.querySelector<HTMLElement>('[data-detail-matiere]');
 		const elDate = document.querySelector<HTMLElement>('[data-detail-date]');
 		const elDesc = document.querySelector<HTMLElement>('[data-detail-desc]');
 
 		let open = false;
+		let originRect: DOMRect | null = null;
 
 		const openTile = (tile: HTMLElement) => {
 			if (!detail || !card || open) return;
@@ -459,29 +664,26 @@ const copies = [...Array(9).keys()];
 			rafId = 0;
 
 			const d = tile.dataset;
-			// 填充詳情內容
 			card.style.setProperty('--tone', tile.style.getPropertyValue('--tone'));
 			card.style.setProperty('--tile-ink', tile.style.getPropertyValue('--tile-ink'));
 			if (elCode) elCode.textContent = d.code ?? '';
 			if (elQuote) elQuote.textContent = d.quote ?? '';
 			if (elTitle) elTitle.textContent = d.title ?? '';
-			if (elDate) elDate.textContent = [d.note, d.date].filter(Boolean).join(' · ');
+			if (elMatiere) elMatiere.textContent = d.matiere ?? '';
+			if (elDate) elDate.textContent = d.date ?? '';
 			if (elDesc) elDesc.textContent = d.desc ?? '';
 
-			// 顯示詳情層並取得目標矩形（Last）
 			detail.hidden = false;
 			card.style.transform = 'none';
 			const last = card.getBoundingClientRect();
-			const first = tile.getBoundingClientRect();
+			const first = originRect ?? tile.getBoundingClientRect();
 
-			// FLIP invert：把 card 從目標位置反推回磚的位置
 			const dx = first.left - last.left;
 			const dy = first.top - last.top;
-			const sx = first.width / last.width;
-			const sy = first.height / last.height;
+			const scx = first.width / last.width;
+			const scy = first.height / last.height;
 			card.style.transition = 'none';
-			card.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`;
-			// 強制回流提交起始狀態（比 rAF 穩定，不受背景分頁節流影響）
+			card.style.transform = `translate(${dx}px, ${dy}px) scale(${scx}, ${scy})`;
 			void card.offsetWidth;
 			card.style.transition = 'transform 0.6s cubic-bezier(0.22, 1, 0.36, 1)';
 			card.style.transform = 'none';
@@ -490,16 +692,14 @@ const copies = [...Array(9).keys()];
 
 		const closeTile = () => {
 			if (!detail || !card || !open) return;
-			const tone = card.style.getPropertyValue('--tone');
-			// 反向 FLIP：回到當前應在的磚位（畫布未動，用最近一次記錄的 originRect）
 			if (originRect) {
 				const last = card.getBoundingClientRect();
 				const dx = originRect.left - last.left;
 				const dy = originRect.top - last.top;
-				const sx = originRect.width / last.width;
-				const sy = originRect.height / last.height;
+				const scx = originRect.width / last.width;
+				const scy = originRect.height / last.height;
 				card.style.transition = 'transform 0.55s cubic-bezier(0.4, 0, 0.2, 1)';
-				card.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`;
+				card.style.transform = `translate(${dx}px, ${dy}px) scale(${scx}, ${scy})`;
 			}
 			detail.classList.remove('open');
 			const finish = () => {
@@ -513,16 +713,15 @@ const copies = [...Array(9).keys()];
 			};
 			card.addEventListener('transitionend', finish);
 			window.setTimeout(finish, 700); // 保險
-			void tone;
 		};
 
-		let originRect: DOMRect | null = null;
 		viewport.addEventListener('click', (e) => {
-			// 拖拽超過閾值視為漫遊，不觸發點擊
-			if (moved > 6) return;
+			if (moved > 6) return; // 觸屏拖拽不觸發點擊
 			const tile = (e.target as Element)?.closest<HTMLElement>('[data-tile]');
 			if (!tile) return;
-			originRect = tile.getBoundingClientRect();
+			// FLIP 以磚的底板（圖片層）為起訖矩形
+			const plate = tile.querySelector<HTMLElement>('.tile-plate');
+			originRect = (plate ?? tile).getBoundingClientRect();
 			openTile(tile);
 		});
 		backdrop?.addEventListener('click', closeTile);
@@ -531,12 +730,14 @@ const copies = [...Array(9).keys()];
 			if (e.key === 'Escape' && open) closeTile();
 		});
 
-		render();
 		wake();
 
 		document.addEventListener(
 			'astro:before-swap',
-			() => cancelAnimationFrame(rafId),
+			() => {
+				cancelAnimationFrame(rafId);
+				window.removeEventListener('resize', measure);
+			},
 			{ once: true }
 		);
 	}

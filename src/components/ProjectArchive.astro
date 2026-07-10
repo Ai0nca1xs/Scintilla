@@ -12,8 +12,20 @@ const { lang } = Astro.props;
 const t = useTranslations(lang);
 
 const localePrefix = lang === 'FR' ? 'fr/' : 'en/';
+
+// 預設排序：按年份從新到舊。年份是字符串（支持 '2019–2024'、'2026–27' 跨度），
+// 取跨度的結束年比較；同年再按 order。
+const endYear = (year: string) => {
+	const full = year.match(/\d{4}/g);
+	if (!full) return 0;
+	let latest = Math.max(...full.map(Number));
+	const short = year.match(/[–-](\d{2})\s*$/);
+	if (short) latest = Math.max(latest, Math.floor(latest / 100) * 100 + Number(short[1]));
+	return latest;
+};
+
 const entries = (await getCollection('projects', ({ id }) => id.startsWith(localePrefix))).sort(
-	(a, b) => a.data.order - b.data.order
+	(a, b) => endYear(b.data.year) - endYear(a.data.year) || a.data.order - b.data.order
 );
 
 const categories = ['GRA', 'SCE', 'INS', 'PRD', 'PHO'] as const;
@@ -22,7 +34,7 @@ const categories = ['GRA', 'SCE', 'INS', 'PRD', 'PHO'] as const;
 <header class="page-header">
 	<h1 class="title-calx">{t.project.heading}</h1>
 	<p class="metadata">
-		SORT BY: CURATED | FILTER: <span data-filter-label>{t.project.filterAll}</span>
+		SORT BY: YEAR ↓ | FILTER: <span data-filter-label>{t.project.filterAll}</span>
 	</p>
 </header>
 
@@ -32,7 +44,7 @@ const categories = ['GRA', 'SCE', 'INS', 'PRD', 'PHO'] as const;
 		categories.map((cat) => (
 			<button class="filter-btn metadata" data-filter={cat}>
 				<span class="filter-dot" data-cat={cat} aria-hidden="true" />
-				{cat} — {t.categories[cat]}
+				{t.categories[cat]}
 			</button>
 		))
 	}
@@ -50,24 +62,27 @@ const categories = ['GRA', 'SCE', 'INS', 'PRD', 'PHO'] as const;
 		margin-bottom: var(--space-lg);
 	}
 
+	/* 無框膠囊：淡染實底替代描邊。
+	   標籤只留具體文字（去分類縮寫），首字母大寫、字距收緊 */
 	.filter-btn {
 		display: inline-flex;
 		align-items: center;
 		gap: 8px;
 		min-height: 44px; /* 移動端點擊熱區 ≥44px */
-		background: none;
-		border: 1px solid rgba(26, 26, 26, 0.15);
-		border-radius: var(--radius-sm);
+		background: rgba(26, 26, 26, 0.05);
+		border: none;
 		padding: 8px 16px;
 		cursor: pointer;
-		opacity: 0.6;
+		opacity: 0.7;
+		text-transform: none;
+		letter-spacing: 0.02em;
 		transition: all 0.4s var(--ease-oxide);
 	}
 
 	.filter-btn:hover {
 		opacity: 1;
-		color: var(--color-magenta);
-		border-color: var(--color-magenta);
+		color: var(--color-accent);
+		background: rgba(26, 26, 26, 0.08);
 	}
 
 	/* 選中態：墨黑實底反白，強對比 */
@@ -75,7 +90,6 @@ const categories = ['GRA', 'SCE', 'INS', 'PRD', 'PHO'] as const;
 		opacity: 1;
 		background: var(--color-ink);
 		color: #f8f9fa;
-		border-color: var(--color-ink);
 	}
 
 	/* 分類色點 */

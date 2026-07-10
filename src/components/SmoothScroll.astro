@@ -6,10 +6,13 @@
 
   // 初始化 Lenis
   const lenis = new Lenis({
-    duration: 1.2,          
-    easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), 
+    duration: 1.2,
+    easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
     syncTouch: false        // 保持 false 以確保手機端使用原生滑動效能
   });
+
+  // 暴露給開屏動畫：滾動驅動白光期間需要暫停頁面滾動，退場後恢復
+  (window as any).__lenis = lenis;
 
   // 建立 requestAnimationFrame 動態遞迴渲染循環 (Animation loop)
   function raf(time: number) {
