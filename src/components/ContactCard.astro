@@ -221,8 +221,8 @@ const backImg = Object.entries(cardImages).find(([path]) => path.includes('card-
 	.cv-btn {
 		display: inline-flex;
 		align-items: center;
-		min-height: 44px; /* 移動端點擊熱區 ≥44px */
-		padding: 12px 24px;
+		height: var(--btn-height); /* 全站按鈕統一高度 */
+		padding: 0 24px;
 		border-radius: var(--radius-sm);
 		background: var(--color-ink);
 		color: #f8f9fa;

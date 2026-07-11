@@ -8,7 +8,7 @@
 <div class="splash" data-splash aria-hidden="true">
 	<canvas class="splash-canvas" data-splash-canvas></canvas>
 	<div class="splash-light" data-splash-light></div>
-	<div class="metadata splash-hint" data-splash-hint>Scroll to develop ↓</div>
+	<div class="metadata splash-hint" data-splash-hint>Scroll ↓</div>
 </div>
 
 <style>
@@ -45,25 +45,22 @@
 		opacity: 0;
 		will-change: transform, opacity;
 	}
+	/* 提示詞：置於視覺中心，隨滾動進度由 JS 逐漸淡出 */
 	.splash-hint {
 		position: absolute;
-		bottom: 1.6rem;
+		top: 50%;
 		left: 50%;
-		transform: translateX(-50%);
-		opacity: 0.45;
+		transform: translate(-50%, -50%);
+		opacity: 0.6;
 		animation: splash-hint-pulse 3.2s var(--ease-oxide) infinite;
-		transition: opacity 0.5s ease;
-	}
-	.splash-hint.hidden {
-		opacity: 0;
 	}
 	@keyframes splash-hint-pulse {
 		0%,
 		100% {
-			opacity: 0.45;
+			opacity: 0.6;
 		}
 		50% {
-			opacity: 0.8;
+			opacity: 0.95;
 		}
 	}
 </style>
@@ -101,9 +98,10 @@
 				r,
 				maxD: rand(r * 0.3, r * 0.5),
 				t: rand(0, Math.PI * 2),
-				tStep: rand(0.1, 1) * (Math.PI / 180) * (Math.random() > 0.5 ? 1 : -1),
+				// 公轉與脈動皆放慢（轉速 ×0.3、呼吸 ×0.5），更沉靜的漂移感
+				tStep: rand(0.1, 1) * (Math.PI / 180) * 0.3 * (Math.random() > 0.5 ? 1 : -1),
 				dt: rand(0, Math.PI * 2),
-				dStep: rand(1, 5) * (Math.PI / 180),
+				dStep: rand(1, 5) * (Math.PI / 180) * 0.5,
 				color: hexToRgba(PALETTE[Math.floor(Math.random() * PALETTE.length)], ALPHA),
 			});
 		}
@@ -219,7 +217,11 @@
 				light.style.transform = `translate(-50%, -50%) scale(${(k * 3.2).toFixed(3)})`;
 				light.style.opacity = Math.min(1, progress * 2.5).toFixed(3);
 			}
-			if (progress > 0.02) hint?.classList.add('hidden');
+			// 提示詞隨滾動進度逐漸消失（接管脈動動畫）
+			if (hint && progress > 0.005) {
+				hint.style.animation = 'none';
+				hint.style.opacity = Math.max(0, 0.6 * (1 - progress * 4)).toFixed(3);
+			}
 			if (progress >= 0.985) {
 				dismiss();
 				return;

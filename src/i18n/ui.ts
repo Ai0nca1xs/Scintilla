@@ -84,7 +84,7 @@ export const dict: Record<Lang, Dict> = {
 			heroMeta: 'Residue of a thousand burnt eras',
 			concept: 'A physical translation of poetics through light, space, and material.',
 			introHtml:
-				'I am <span class="hover-bold">Qianyu, a multidisciplinary designer</span> exploring the boundaries between <strong>Visual Identity</strong>, <strong>Spatial Narrative</strong>, and <strong>Interactive Experience</strong>. My work seeks to capture the <em>scintilla</em>—the subtle, fleeting sparks of conceptual fusion—and solidify them through rigorous design processes.',
+				'I am <span class="hover-bold">Qianyu</span><span class="hover-bold">, a multidisciplinary designer</span> exploring the boundaries between <strong>Visual Identity</strong>, <strong>Spatial Narrative</strong>, and <strong>Interactive Experience</strong>. My work seeks to capture the <em>scintilla</em>—the subtle, fleeting sparks of conceptual fusion—and solidify them through rigorous design processes.',
 			cvEducation: [
 				'2025— · EBABX — École supérieure des beaux-arts de Bordeaux',
 				'2024–25 · Université de Reims — CIEF, French B2',
@@ -174,7 +174,7 @@ export const dict: Record<Lang, Dict> = {
 			heroMeta: 'Residue of a thousand burnt eras',
 			concept: "Une traduction physique de la poétique, par la lumière, l'espace et la matière.",
 			introHtml:
-				"Je suis <span class='hover-bold'>Qianyu, designer pluridisciplinaire</span> explorant les frontières entre <strong>identité visuelle</strong>, <strong>narration spatiale</strong> et <strong>expérience interactive</strong>. Mon travail cherche à capter la <em>scintilla</em> — ces étincelles subtiles et fugaces où les concepts fusionnent — et à les fixer par un processus de design rigoureux.",
+				"Je suis <span class='hover-bold'>Qianyu</span><span class='hover-bold'>, designer pluridisciplinaire</span> explorant les frontières entre <strong>identité visuelle</strong>, <strong>narration spatiale</strong> et <strong>expérience interactive</strong>. Mon travail cherche à capter la <em>scintilla</em> — ces étincelles subtiles et fugaces où les concepts fusionnent — et à les fixer par un processus de design rigoureux.",
 			cvEducation: [
 				'2025— · EBABX — École supérieure des beaux-arts de Bordeaux',
 				'2024–25 · Université de Reims — CIEF, français B2',

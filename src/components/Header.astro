@@ -141,11 +141,11 @@ const navItems = [
 		display: flex;
 	}
 
+	/* 純漸變色塊（無盒結構、無光暈框）：懸浮變淡，選中變色 + 邊緣擴散 */
 	.nav-btn {
 		--btn-anim: 0.55s;
-		height: 24px;
-		min-width: 104px;
-		padding: 0 16px;
+		height: var(--btn-height);
+		width: 100px;
 		display: inline-flex;
 		justify-content: center;
 		align-items: center;
@@ -153,40 +153,32 @@ const navItems = [
 		font-family: var(--font-mono);
 		font-size: 14px;
 		color: #403096;
-		border: solid #ffffff 0px;
+		border: none;
 		border-radius: 0px;
 		background: radial-gradient(circle at 50% 50%, #ffbad5 20%, #ffffff 80%);
-		box-shadow:
-			0px 0px 12px #ffbad5,
-			1px 3px 12px #ffbad5,
-			inset 5px 5px 10px #ffffff,
-			inset -5px -5px 10px #ffffff;
 		transition: 500ms;
 	}
 
-	/* 懸浮：品紅光暈（原始樣式的 hover 文字為白色，在淺粉底上不可讀，改用同款 #FF0064）*/
+	/* 懸浮：整體顏色變淡 */
 	.nav-btn:hover {
-		box-shadow:
-			1px 1px 10px #ff0064,
-			-1px -1px 10px #ff0064;
-		color: #ff0064;
+		opacity: 0.6;
 		transition: 500ms;
 	}
 
+	/* 點擊 / 當前選中：顏色變化 + 邊緣向外擴散的柔光 */
 	.nav-btn:active {
-		box-shadow:
-			1px 1px 13px #ff0064,
-			-1px -1px 33px #ff0064;
-		color: #ff0064;
+		opacity: 1;
+		background: radial-gradient(circle at 50% 50%, #ff9dbe 10%, #ffe3ee 85%);
+		box-shadow: 0 0 22px 6px rgba(255, 0, 72, 0.28);
+		color: var(--color-accent);
 		transition: 100ms;
 	}
 
-	/* 當前區塊：持續品紅光暈 */
 	.nav-btn.current {
-		color: #ff0064;
-		box-shadow:
-			1px 1px 10px #ff0064,
-			-1px -1px 10px #ff0064;
+		opacity: 1;
+		background: radial-gradient(circle at 50% 50%, #ff9dbe 10%, #ffe3ee 85%);
+		box-shadow: 0 0 18px 4px rgba(255, 0, 72, 0.24);
+		color: var(--color-accent);
 	}
 
 	/* 6. 懸浮字符亂碼載入動畫（chitchat，加速版）：
@@ -218,7 +210,7 @@ const navItems = [
 			color: transparent;
 		}
 		100% {
-			color: #ff0064;
+			color: currentColor;
 		}
 	}
 
@@ -306,7 +298,7 @@ const navItems = [
 			gap: 16px;
 		}
 		.nav-btn {
-			min-width: 0;
+			width: auto;
 			padding: 0 12px;
 		}
 	}
