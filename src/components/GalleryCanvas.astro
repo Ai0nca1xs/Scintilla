@@ -7,8 +7,11 @@
 // ③ 3D 懸停傾斜：懸停時磚依游標在其包圍盒內的相對位置 rotateX / rotateY 傾斜。
 // ④ 插值與阻尼：平移、視差、傾斜全部經 lerp 平滑，經 rAF 驅動，帶自然拖尾延遲。
 //
-// ▍圖片放置規則：把圖片命名為磚的編號放進 src/assets/gallery/（如 GAL-001.jpg），
-//   對應磚面自動換成圖片；沒有圖片的磚保持純色佔位。說明文字置於磚外（mono 10px 四行）。
+// ▍圖片放置規則（多圖橫向瀏覽）：放進 src/assets/gallery/，檔名以磚編號開頭：
+//     GAL-001.jpg                → 磚面首圖（自適應比例，不裁切）
+//     GAL-001-02-atelier-vue.jpg → 詳情第 2 張（去掉編號的檔名 = 底部圖注）
+//     GAL-001-03.jpg             → 詳情第 3 張（無文字則不顯示圖注）
+//   點開磚後從左往右滾動瀏覽全部圖片；沒有圖片的磚保持純色佔位卡。
 import type { ImageMetadata } from 'astro';
 import { Image } from 'astro:assets';
 import { useTranslations, type Lang } from '@/i18n/utils';
@@ -20,15 +23,35 @@ interface Props {
 const { lang } = Astro.props;
 const t = useTranslations(lang);
 
-// 磚面圖片自動裝載（檔名 = 磚編號，不分大小寫）
+// 磚的多圖自動裝載：檔名以編號開頭（不分大小寫），按檔名排序
 const galleryImages = import.meta.glob<{ default: ImageMetadata }>(
 	'/src/assets/gallery/*.{jpg,jpeg,png,webp}',
 	{ eager: true }
 );
-const imageFor = (code: string) =>
-	Object.entries(galleryImages).find(([path]) =>
-		path.toUpperCase().includes(`/${code.toUpperCase()}.`)
-	)?.[1]?.default;
+const imagesFor = (code: string) =>
+	Object.entries(galleryImages)
+		.filter(([path]) => {
+			const base = (path.split('/').pop() ?? '').toUpperCase();
+			return base === `${code.toUpperCase()}` || base.startsWith(`${code.toUpperCase()}.`) || base.startsWith(`${code.toUpperCase()}-`);
+		})
+		// 排序鍵 = 編號後的尾綴（首圖無尾綴 → 排最前；"-02" "-03" 按數字序）
+		.sort(([a], [b]) => {
+			const key = (p: string) =>
+				(p.split('/').pop() ?? '').replace(/\.[a-z]+$/i, '').slice(code.length) || '-00';
+			return key(a).localeCompare(key(b), undefined, { numeric: true });
+		})
+		.map(([path, mod]) => {
+			// 圖注 = 檔名去掉「編號-序號-」前綴（"GAL-001-02-atelier-vue" → "Atelier vue"）
+			const base = (path.split('/').pop() ?? '').replace(/\.[a-z]+$/i, '');
+			const rest = base
+				.slice(code.length)
+				.replace(/^-\d+/, '')
+				.replace(/^[-_]+/, '')
+				.replace(/[-_]+/g, ' ')
+				.trim();
+			const caption = rest ? rest.charAt(0).toUpperCase() + rest.slice(1) : '';
+			return { image: mod.default, caption };
+		});
 
 // 基礎單元（design px）：磚散置在 1500×1080 的一格裡，2×2 複製後逐磚回繞
 const CELL_W = 1500;
@@ -87,70 +110,98 @@ const copies = [
 <div class="canvas-viewport" data-canvas-viewport>
 	{
 		copies.map((copy, ci) =>
-			tiles.map((tile, ti) => (
-				<div
-					class="canvas-tile"
-					data-tile
-					data-code={tile.code}
-					data-title={tile.title}
-					data-matiere={tile.matiere}
-					data-date={tile.date}
-					data-desc={tile.desc}
-					data-quote={tile.quote ?? ''}
-					data-bx={tile.x}
-					data-by={tile.y}
-					data-cx={copy.cx}
-					data-cy={copy.cy}
-					data-ease={easeOf(ti).toFixed(3)}
-					aria-hidden={ci === 0 ? undefined : 'true'}
-					style={`width:${tile.w}px; --plate-h:${tile.h}px; --tone:${tile.tone}; --tile-ink:${tile.ink ?? '#f8f9fa'};`}
-				>
-					<div class="tile-intro">
-						{/* ③ 傾斜層：懸停 rotateX/rotateY */}
-						<div class="tile-tilt" data-tilt data-cursor-label="VIEW">
-							{/* ② 視差層 1：底板（最深、移動最少）；有同名圖片時自動鋪滿 */}
-							<div class="tile-plate" data-depth="0.35">
-								{imageFor(tile.code) && (
-									<Image src={imageFor(tile.code)!} alt={tile.title} class="tile-img" width={900} />
-								)}
-								<span class="metadata tile-code" data-depth="0.75">{tile.code}</span>
-								{tile.quote && (
-									<p class="tile-quote" data-depth="0.55">
-										{tile.quote}
-									</p>
-								)}
+			tiles.map((tile, ti) => {
+				const imgs = imagesFor(tile.code);
+				return (
+					<div
+						class="canvas-tile"
+						data-tile
+						data-code={tile.code}
+						data-title={tile.title}
+						data-matiere={tile.matiere}
+						data-date={tile.date}
+						data-desc={tile.desc}
+						data-quote={tile.quote ?? ''}
+						data-bx={tile.x}
+						data-by={tile.y}
+						data-cx={copy.cx}
+						data-cy={copy.cy}
+						data-ease={easeOf(ti).toFixed(3)}
+						aria-hidden={ci === 0 ? undefined : 'true'}
+						style={`width:${tile.w}px; --plate-h:${tile.h}px; --tone:${tile.tone}; --tile-ink:${tile.ink ?? '#f8f9fa'};`}
+					>
+						<div class="tile-intro">
+							{/* ③ 傾斜層：懸停 rotateX/rotateY */}
+							<div class="tile-tilt" data-tilt data-cursor-label="VIEW">
+								{/* ② 視差層 1：底板；有圖片時高度隨圖片比例自適應（不裁切） */}
+								<div class:list={['tile-plate', { 'has-img': imgs.length > 0 }]} data-depth="0.35">
+									{imgs.length > 0 && (
+										<Image src={imgs[0].image} alt={tile.title} class="tile-img" width={900} />
+									)}
+									<span class="metadata tile-code" data-depth="0.75">{tile.code}</span>
+									{tile.quote && (
+										<p class="tile-quote" data-depth="0.55">
+											{tile.quote}
+										</p>
+									)}
+								</div>
+							</div>
+							{/* ② 視差層 2：磚外說明文字（最淺、移動最多）——標題 / 尺寸材質 / 簡介 / 年份 */}
+							<div class="tile-caption" data-depth="1">
+								<span class="cap-title">{tile.title}</span>
+								<span class="cap-line">{tile.matiere}</span>
+								<span class="cap-line">{tile.desc}</span>
+								<span class="cap-year">{tile.date}</span>
 							</div>
 						</div>
-						{/* ② 視差層 2：磚外說明文字（最淺、移動最多）——標題 / 尺寸材質 / 簡介 / 年份 */}
-						<div class="tile-caption" data-depth="1">
-							<span class="cap-title">{tile.title}</span>
-							<span class="cap-line">{tile.matiere}</span>
-							<span class="cap-line">{tile.desc}</span>
-							<span class="cap-year">{tile.date}</span>
-						</div>
 					</div>
-				</div>
-			))
+				);
+			})
 		)
 	}
 </div>
 
-{/* FLIP 詳情層：點擊磚後放大居中，收合時反向動畫回原位 */}
+{/* 詳情滑軌模板：每磚一份（多圖橫向瀏覽的素材，JS 開啟時取用） */}
+{
+	tiles.map((tile) => {
+		const imgs = imagesFor(tile.code);
+		return (
+			imgs.length > 0 && (
+				<template data-slides={tile.code}>
+					{imgs.map((it) => (
+						<Image src={it.image} alt={it.caption || tile.title} data-caption={it.caption} width={1600} />
+					))}
+				</template>
+			)
+		);
+	})
+}
+
+{/* 沉浸式詳情層：從左往右滾動瀏覽；點空白 / 背景 / Esc 退出 */}
 <div class="gallery-detail" data-detail hidden>
 	<div class="detail-backdrop" data-detail-backdrop></div>
-	<div class="detail-stage">
-		<figure class="detail-card" data-detail-card>
-			<span class="metadata detail-code" data-detail-code></span>
-			<p class="detail-quote" data-detail-quote></p>
-		</figure>
-		<div class="detail-meta" data-detail-meta>
-			<h2 class="detail-title" data-detail-title></h2>
-			<span class="detail-line" data-detail-matiere></span>
-			<p class="detail-desc" data-detail-desc></p>
-			<span class="detail-year" data-detail-date></span>
-			<button class="detail-close metadata" data-detail-close>Close ✕</button>
-		</div>
+
+	<div class="detail-scroller" data-detail-scroller></div>
+
+	{/* 首屏 meta（開啟時移入第一張圖下方，與圖片左對齊） */}
+	<div class="detail-meta" data-detail-meta hidden>
+		<h2 class="detail-title" data-detail-title></h2>
+		<span class="detail-line" data-detail-matiere></span>
+		<p class="detail-desc" data-detail-desc></p>
+		<span class="detail-year" data-detail-date></span>
 	</div>
+
+	{/* 底部信息條：左＝當前圖注，右＝01/07（斜體同字號） */}
+	<div class="detail-bar">
+		<span class="bar-caption" data-bar-caption></span>
+		<span class="bar-counter" data-bar-counter></span>
+	</div>
+
+	{/* 輔助箭頭：低調置於兩側 */}
+	<button class="detail-nav prev" data-detail-prev aria-label="Previous">‹</button>
+	<button class="detail-nav next" data-detail-next aria-label="Next">›</button>
+
+	<button class="detail-close metadata" data-detail-close>Close ✕</button>
 </div>
 
 <style define:vars={{ cellW: `${CELL_W}`, cellH: `${CELL_H}` }}>
@@ -205,19 +256,28 @@ const copies = [
 		box-sizing: border-box;
 		background: var(--tone);
 		color: var(--tile-ink);
+		overflow: hidden;
 		will-change: transform;
 	}
 
-	/* 磚面圖片：鋪滿底板（有圖時編號疊於其上） */
-	.tile-plate {
-		overflow: hidden;
+	/* 有圖磚：高度隨圖片比例自適應（寬度守磚位，長寬不裁切） */
+	.tile-plate.has-img {
+		height: auto;
+		padding: 0;
+		display: block;
+		background: none;
 	}
 	.tile-img {
-		position: absolute;
-		inset: 0;
+		display: block;
 		width: 100%;
-		height: 100%;
-		object-fit: cover;
+		height: auto;
+	}
+	.tile-plate.has-img .tile-code {
+		position: absolute;
+		top: 12px;
+		left: 16px;
+		color: #ffffff;
+		text-shadow: 0 1px 8px rgba(26, 26, 26, 0.5);
 	}
 
 	.tile-code {
@@ -265,62 +325,96 @@ const copies = [
 		font-style: italic;
 	}
 
-	/* —— FLIP 詳情層 —— */
+	/* —— 沉浸式詳情層 —— */
 	.gallery-detail {
 		position: fixed;
 		inset: 0;
 		z-index: 800;
+		opacity: 0;
+		transition: opacity 0.45s var(--ease-develop);
+	}
+	.gallery-detail.open {
+		opacity: 1;
 	}
 	.gallery-detail[hidden] {
 		display: none;
 	}
 
+	/* 背景：近乎不透明的白 + 強模糊——畫布退場，只留圖片（沉浸） */
 	.detail-backdrop {
 		position: absolute;
 		inset: 0;
-		background: rgba(248, 249, 250, 0.6);
-		-webkit-backdrop-filter: blur(16px) saturate(1.3);
-		backdrop-filter: blur(16px) saturate(1.3);
-		opacity: 0;
-		transition: opacity 0.5s var(--ease-develop);
-	}
-	.gallery-detail.open .detail-backdrop {
-		opacity: 1;
+		background: rgba(248, 249, 250, 0.94);
+		-webkit-backdrop-filter: blur(28px) saturate(1.2);
+		backdrop-filter: blur(28px) saturate(1.2);
 	}
 
-	.detail-stage {
+	/* 橫向滑軌：從左往右滾動瀏覽，snap 置中，隱藏滾動條 */
+	.detail-scroller {
 		position: absolute;
 		inset: 0;
 		display: flex;
-		flex-direction: column;
 		align-items: center;
-		justify-content: center;
-		gap: 24px;
-		padding: var(--space-lg) var(--gutter);
-		pointer-events: none;
+		gap: 7vw;
+		padding: 56px max(12vw, var(--gutter)) 88px;
+		overflow-x: auto;
+		overflow-y: hidden;
+		scroll-snap-type: x mandatory;
+		scrollbar-width: none;
+	}
+	.detail-scroller::-webkit-scrollbar {
+		display: none;
 	}
 
-	.detail-card {
+	/* 幻燈片：漸進入場；非當前張半透明退後（聚焦當前） */
+	.gallery-detail :global(.d-slide) {
+		flex: 0 0 auto;
 		margin: 0;
-		width: min(560px, 82vw);
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start; /* meta / 圖注與圖片左緣對齊 */
+		scroll-snap-align: center;
+		opacity: 0;
+		transform: translateX(36px);
+		transition:
+			opacity 0.6s var(--ease-develop),
+			transform 0.6s var(--ease-develop);
+	}
+	.gallery-detail :global(.d-slide.in) {
+		opacity: 0.32;
+		transform: none;
+	}
+	.gallery-detail :global(.d-slide.in.active) {
+		opacity: 1;
+	}
+
+	.gallery-detail :global(.d-media img) {
+		display: block;
+		width: auto;
+		height: auto;
+		max-height: 62vh;
+		max-width: min(78vw, 1100px);
+		box-shadow: 0 24px 70px -36px rgba(26, 26, 26, 0.4);
+	}
+
+	/* 無圖磚的純色卡 */
+	.gallery-detail :global(.d-card) {
+		width: min(560px, 78vw);
 		aspect-ratio: 4 / 3;
 		display: flex;
 		flex-direction: column;
 		justify-content: space-between;
 		padding: 24px;
+		box-sizing: border-box;
 		background: var(--tone, #1a1a1a);
 		color: var(--tile-ink, #f8f9fa);
-		box-shadow: 0 30px 80px -40px rgba(26, 26, 26, 0.5);
-		transform-origin: top left;
-		will-change: transform;
+		box-shadow: 0 24px 70px -36px rgba(26, 26, 26, 0.4);
 	}
-
-	.detail-code {
+	.gallery-detail :global(.d-card-code) {
 		color: inherit;
 		opacity: 0.55;
 	}
-
-	.detail-quote {
+	.gallery-detail :global(.d-card-quote) {
 		font-size: 18px;
 		font-style: italic;
 		line-height: 1.5;
@@ -328,10 +422,11 @@ const copies = [
 		opacity: 0.92;
 	}
 
-	/* 詳情說明：與磚外說明同構的四行（標題 / 材質 / 簡介 / 年份） */
+	/* 首張下方的四行說明：與圖片左對齊 */
 	.detail-meta {
-		width: min(560px, 82vw);
-		pointer-events: auto;
+		margin-top: 16px;
+		max-width: min(78vw, 560px);
+		text-align: left;
 		font-family: var(--font-mono);
 	}
 	.detail-meta > * {
@@ -342,19 +437,16 @@ const copies = [
 		animation: meta-in 0.55s var(--ease-develop) forwards;
 	}
 	.gallery-detail.open .detail-title {
-		animation-delay: 0.1s;
+		animation-delay: 0.15s;
 	}
 	.gallery-detail.open .detail-line {
-		animation-delay: 0.18s;
+		animation-delay: 0.22s;
 	}
 	.gallery-detail.open .detail-desc {
-		animation-delay: 0.26s;
+		animation-delay: 0.3s;
 	}
 	.gallery-detail.open .detail-year {
-		animation-delay: 0.32s;
-	}
-	.gallery-detail.open .detail-close {
-		animation-delay: 0.4s;
+		animation-delay: 0.36s;
 	}
 
 	@keyframes meta-in {
@@ -365,8 +457,8 @@ const copies = [
 	}
 
 	.detail-title {
-		font-size: clamp(1.6rem, 4vw, 2.4rem);
-		font-weight: 600;
+		font-size: clamp(1.4rem, 3vw, 2rem);
+		font-weight: 700;
 		letter-spacing: -0.02em;
 		margin: 0 0 6px;
 	}
@@ -374,22 +466,83 @@ const copies = [
 		display: block;
 		font-size: 12px;
 		color: var(--text-secondary);
-		margin-bottom: 8px;
+		margin-bottom: 6px;
 	}
 	.detail-desc {
-		font-size: 14px;
-		line-height: 1.6;
+		font-size: 12px;
+		line-height: 22px;
 		color: var(--text-secondary);
 		max-width: 52ch;
-		margin: 0 0 8px;
+		margin: 0 0 6px;
 	}
 	.detail-year {
 		display: block;
 		font-size: 12px;
 		color: var(--text-muted);
-		margin-bottom: 12px;
 	}
+
+	/* 底部信息條：左圖注 / 右計數（同字號，計數斜體） */
+	.detail-bar {
+		position: absolute;
+		left: max(12vw, var(--gutter));
+		right: max(12vw, var(--gutter));
+		bottom: 24px;
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+		gap: 24px;
+		pointer-events: none;
+		font-family: var(--font-mono);
+		font-size: 11px;
+		letter-spacing: 0.06em;
+	}
+	.bar-caption {
+		color: var(--text-secondary);
+	}
+	.bar-counter {
+		font-style: italic;
+		color: var(--text-muted);
+	}
+
+	/* 輔助箭頭：低調的兩側符號 */
+	.detail-nav {
+		position: absolute;
+		top: 50%;
+		transform: translateY(-50%);
+		width: 44px;
+		height: 44px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border: none;
+		background: none;
+		font-family: var(--font-mono);
+		font-size: 26px;
+		line-height: 1;
+		color: var(--color-ink);
+		opacity: 0.22;
+		cursor: pointer;
+		transition: opacity 0.3s ease;
+		z-index: 2;
+	}
+	.detail-nav:hover {
+		opacity: 0.7;
+	}
+	.detail-nav.prev {
+		left: 10px;
+	}
+	.detail-nav.next {
+		right: 10px;
+	}
+	.gallery-detail[data-single='1'] .detail-nav,
+	.gallery-detail[data-single='1'] .bar-counter {
+		display: none;
+	}
+
 	.detail-close {
+		position: absolute;
+		top: 16px;
+		right: var(--gutter);
 		display: inline-flex;
 		align-items: center;
 		height: var(--btn-height); /* 全站按鈕統一高度 */
@@ -400,6 +553,7 @@ const copies = [
 		text-decoration: underline;
 		text-underline-offset: 6px;
 		transition: color 0.3s var(--ease-oxide);
+		z-index: 2;
 	}
 	.detail-close:hover {
 		color: var(--color-accent);
@@ -407,13 +561,14 @@ const copies = [
 
 	@media (prefers-reduced-motion: reduce) {
 		.tile-intro,
-		.detail-card,
-		.detail-backdrop,
+		.gallery-detail,
+		.gallery-detail :global(.d-slide),
 		.gallery-detail.open .detail-meta > * {
 			transition: none !important;
 			animation: none !important;
 		}
-		.tile-intro {
+		.tile-intro,
+		.gallery-detail :global(.d-slide) {
 			opacity: 1;
 			transform: none;
 		}
@@ -660,93 +815,192 @@ const copies = [
 			});
 		}, 1400);
 
-		// —— FLIP 詳情 ——
+		// —— 沉浸式詳情：橫向滾動瀏覽多圖 ——
 		const detail = document.querySelector<HTMLElement>('[data-detail]');
-		const card = document.querySelector<HTMLElement>('[data-detail-card]');
+		const scroller = document.querySelector<HTMLElement>('[data-detail-scroller]');
 		const backdrop = document.querySelector<HTMLElement>('[data-detail-backdrop]');
 		const closeBtn = document.querySelector<HTMLElement>('[data-detail-close]');
-		const elCode = document.querySelector<HTMLElement>('[data-detail-code]');
-		const elQuote = document.querySelector<HTMLElement>('[data-detail-quote]');
+		const prevBtn = document.querySelector<HTMLElement>('[data-detail-prev]');
+		const nextBtn = document.querySelector<HTMLElement>('[data-detail-next]');
+		const metaBox = document.querySelector<HTMLElement>('[data-detail-meta]');
+		const barCaption = document.querySelector<HTMLElement>('[data-bar-caption]');
+		const barCounter = document.querySelector<HTMLElement>('[data-bar-counter]');
 		const elTitle = document.querySelector<HTMLElement>('[data-detail-title]');
 		const elMatiere = document.querySelector<HTMLElement>('[data-detail-matiere]');
 		const elDate = document.querySelector<HTMLElement>('[data-detail-date]');
 		const elDesc = document.querySelector<HTMLElement>('[data-detail-desc]');
 
 		let open = false;
-		let originRect: DOMRect | null = null;
+		let slides: HTMLElement[] = [];
+		let captions: string[] = [];
+		let active = -1;
+		let scrollRaf = 0;
+
+		const pad2 = (n: number) => String(n).padStart(2, '0');
+
+		// 依滑軌中心找當前張：更新計數、圖注與聚焦態
+		const updateActive = () => {
+			scrollRaf = 0;
+			if (!scroller || !slides.length) return;
+			const center = scroller.scrollLeft + scroller.clientWidth / 2;
+			let best = 0;
+			let bestD = Infinity;
+			slides.forEach((s, i) => {
+				const c = s.offsetLeft + s.offsetWidth / 2;
+				const d = Math.abs(c - center);
+				if (d < bestD) {
+					bestD = d;
+					best = i;
+				}
+			});
+			if (best !== active) {
+				active = best;
+				slides.forEach((s, i) => s.classList.toggle('active', i === active));
+				if (barCounter) barCounter.textContent = `${pad2(active + 1)}/${pad2(slides.length)}`;
+				if (barCaption) barCaption.textContent = captions[active] ?? '';
+			}
+		};
+		const queueUpdate = () => {
+			if (!scrollRaf) scrollRaf = requestAnimationFrame(updateActive);
+		};
 
 		const openTile = (tile: HTMLElement) => {
-			if (!detail || !card || open) return;
+			if (!detail || !scroller || !metaBox || open) return;
 			open = true;
 			paused = true;
 			cancelAnimationFrame(rafId);
 			rafId = 0;
 
 			const d = tile.dataset;
-			card.style.setProperty('--tone', tile.style.getPropertyValue('--tone'));
-			card.style.setProperty('--tile-ink', tile.style.getPropertyValue('--tile-ink'));
-			if (elCode) elCode.textContent = d.code ?? '';
-			if (elQuote) elQuote.textContent = d.quote ?? '';
 			if (elTitle) elTitle.textContent = d.title ?? '';
 			if (elMatiere) elMatiere.textContent = d.matiere ?? '';
 			if (elDate) elDate.textContent = d.date ?? '';
 			if (elDesc) elDesc.textContent = d.desc ?? '';
 
-			detail.hidden = false;
-			card.style.transform = 'none';
-			const last = card.getBoundingClientRect();
-			const first = originRect ?? tile.getBoundingClientRect();
+			// 組裝幻燈片
+			scroller.textContent = '';
+			captions = [];
+			const frag = document.createDocumentFragment();
+			const tpl = document.querySelector<HTMLTemplateElement>(
+				`template[data-slides="${d.code}"]`
+			);
+			const makeSlide = () => {
+				const slide = document.createElement('figure');
+				slide.className = 'd-slide';
+				return slide;
+			};
 
-			const dx = first.left - last.left;
-			const dy = first.top - last.top;
-			const scx = first.width / last.width;
-			const scy = first.height / last.height;
-			card.style.transition = 'none';
-			card.style.transform = `translate(${dx}px, ${dy}px) scale(${scx}, ${scy})`;
-			void card.offsetWidth;
-			card.style.transition = 'transform 0.6s cubic-bezier(0.22, 1, 0.36, 1)';
-			card.style.transform = 'none';
-			detail.classList.add('open');
+			if (tpl && tpl.content.querySelector('img')) {
+				Array.from(tpl.content.querySelectorAll('img')).forEach((imgNode, i) => {
+					const slide = makeSlide();
+					const media = document.createElement('div');
+					media.className = 'd-media';
+					const img = imgNode.cloneNode(true) as HTMLImageElement;
+					media.appendChild(img);
+					slide.appendChild(media);
+					captions.push(img.dataset.caption ?? '');
+					if (i === 0) {
+						metaBox.hidden = false;
+						slide.appendChild(metaBox); // meta 移入首張圖下方 → 與圖片左緣對齊
+					}
+					frag.appendChild(slide);
+				});
+			} else {
+				// 無圖磚：純色卡 + meta
+				const slide = makeSlide();
+				const media = document.createElement('div');
+				media.className = 'd-media';
+				const cardEl = document.createElement('div');
+				cardEl.className = 'd-card';
+				cardEl.style.setProperty('--tone', tile.style.getPropertyValue('--tone'));
+				cardEl.style.setProperty('--tile-ink', tile.style.getPropertyValue('--tile-ink'));
+				const codeSpan = document.createElement('span');
+				codeSpan.className = 'metadata d-card-code';
+				codeSpan.textContent = d.code ?? '';
+				const quoteP = document.createElement('p');
+				quoteP.className = 'd-card-quote';
+				quoteP.textContent = d.quote ?? '';
+				cardEl.append(codeSpan, quoteP);
+				media.appendChild(cardEl);
+				slide.appendChild(media);
+				metaBox.hidden = false;
+				slide.appendChild(metaBox);
+				captions.push('');
+				frag.appendChild(slide);
+			}
+
+			scroller.appendChild(frag);
+			slides = Array.from(scroller.querySelectorAll<HTMLElement>('.d-slide'));
+			detail.dataset.single = slides.length <= 1 ? '1' : '0';
+			active = -1;
+			scroller.scrollLeft = 0;
+
+			detail.hidden = false;
+			requestAnimationFrame(() => {
+				detail.classList.add('open');
+				// 圖片漸進入場（stagger），落定後解除延遲
+				slides.forEach((s, i) => {
+					s.style.transitionDelay = `${Math.min(i * 90, 540)}ms`;
+					s.classList.add('in');
+				});
+				window.setTimeout(() => slides.forEach((s) => (s.style.transitionDelay = '')), 1200);
+				updateActive();
+			});
 		};
 
 		const closeTile = () => {
-			if (!detail || !card || !open) return;
-			if (originRect) {
-				const last = card.getBoundingClientRect();
-				const dx = originRect.left - last.left;
-				const dy = originRect.top - last.top;
-				const scx = originRect.width / last.width;
-				const scy = originRect.height / last.height;
-				card.style.transition = 'transform 0.55s cubic-bezier(0.4, 0, 0.2, 1)';
-				card.style.transform = `translate(${dx}px, ${dy}px) scale(${scx}, ${scy})`;
-			}
+			if (!detail || !scroller || !metaBox || !open) return;
 			detail.classList.remove('open');
-			const finish = () => {
+			window.setTimeout(() => {
 				detail.hidden = true;
-				card.style.transition = 'none';
-				card.style.transform = 'none';
+				// meta 移回根節點待用
+				metaBox.hidden = true;
+				detail.appendChild(metaBox);
+				scroller.textContent = '';
+				slides = [];
 				open = false;
 				paused = false;
 				wake();
-				card.removeEventListener('transitionend', finish);
-			};
-			card.addEventListener('transitionend', finish);
-			window.setTimeout(finish, 700); // 保險
+			}, 460);
+		};
+
+		const goTo = (i: number) => {
+			const target = slides[Math.max(0, Math.min(slides.length - 1, i))];
+			target?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
 		};
 
 		viewport.addEventListener('click', (e) => {
 			if (moved > 6) return; // 觸屏拖拽不觸發點擊
 			const tile = (e.target as Element)?.closest<HTMLElement>('[data-tile]');
 			if (!tile) return;
-			// FLIP 以磚的底板（圖片層）為起訖矩形
-			const plate = tile.querySelector<HTMLElement>('.tile-plate');
-			originRect = (plate ?? tile).getBoundingClientRect();
 			openTile(tile);
+		});
+
+		// 滾輪 → 橫向滾動（從左往右瀏覽）
+		scroller?.addEventListener(
+			'wheel',
+			(e) => {
+				e.preventDefault();
+				scroller.scrollLeft += e.deltaY + e.deltaX;
+			},
+			{ passive: false }
+		);
+		scroller?.addEventListener('scroll', queueUpdate, { passive: true });
+
+		// 點擊空白處退出（圖片 / 說明 / 按鈕之外）
+		scroller?.addEventListener('click', (e) => {
+			const t = e.target as Element;
+			if (t === scroller || t.classList?.contains('d-slide')) closeTile();
 		});
 		backdrop?.addEventListener('click', closeTile);
 		closeBtn?.addEventListener('click', closeTile);
+		prevBtn?.addEventListener('click', () => goTo(active - 1));
+		nextBtn?.addEventListener('click', () => goTo(active + 1));
 		window.addEventListener('keydown', (e) => {
-			if (e.key === 'Escape' && open) closeTile();
+			if (!open) return;
+			if (e.key === 'Escape') closeTile();
+			if (e.key === 'ArrowRight') goTo(active + 1);
+			if (e.key === 'ArrowLeft') goTo(active - 1);
 		});
 
 		wake();
@@ -755,6 +1009,7 @@ const copies = [
 			'astro:before-swap',
 			() => {
 				cancelAnimationFrame(rafId);
+				cancelAnimationFrame(scrollRaf);
 				window.removeEventListener('resize', measure);
 			},
 			{ once: true }

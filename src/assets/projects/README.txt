@@ -3,5 +3,7 @@
   projects/spectre/cover.jpg        封面（檔案庫卡片 + 詳情頁頂部）
   projects/spectre/01-serie-a.jpg   詳情頁圖版 1（按檔名排序；去掉編號就是圖注）
   projects/spectre/02-detail.jpg    詳情頁圖版 2
+  projects/spectre/03-processus.txt 說明文字 bloc（依檔名序插入圖版之間；
+                                    檔名作小標，正文按空行分段）
 
 建議尺寸：寬 1600px 左右、JPG 80% 質量。詳見 docs/maintenance-guide.md

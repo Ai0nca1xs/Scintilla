@@ -67,15 +67,68 @@ const slots: { span: string; ratio: string }[] = [];
 for (let ri = seed; slots.length < plateCount; ri++) {
 	slots.push(...rowPatterns[ri % rowPatterns.length]);
 }
-const plates = slots.slice(0, plateCount).map((p, i) => ({
-	...p,
+
+// —— 說明文字 bloc：<slug>/NN-titre.txt → 依檔名序插入圖版之間（輔助說明）——
+// 檔案首字母大寫的檔名作小標；正文按空行分段。
+const allProjectNotes = import.meta.glob<string>('/src/assets/projects/*/*.txt', {
+	eager: true,
+	query: '?raw',
+	import: 'default',
+});
+const ownNotes = Object.entries(allProjectNotes)
+	.filter(([path]) => path.includes(`/projects/${slug}/`) && !/readme/i.test(path))
+	.sort(([a], [b]) => a.localeCompare(b));
+
+type Block =
+	| {
+			kind: 'plate';
+			span: string;
+			ratio: string;
+			code: string;
+			mix: number;
+			drift: number;
+			image: ImageMetadata | null;
+			caption: string;
+	  }
+	| { kind: 'note'; label: string; paragraphs: string[] };
+
+const basenameOf = (path: string) => path.split('/').pop() ?? '';
+const sequence = [
+	...detailImages.map(([path, mod]) => ({ kind: 'img' as const, path, image: mod.default })),
+	...ownNotes.map(([path, content]) => ({ kind: 'txt' as const, path, content })),
+].sort((a, b) => basenameOf(a.path).localeCompare(basenameOf(b.path)));
+
+const mkPlate = (i: number, image: ImageMetadata | null, caption: string): Block => ({
+	kind: 'plate',
+	...slots[i],
 	code: `Plate ${String(i + 1).padStart(2, '0')}`,
 	// 淡染深淺輪換，同一頁的佔位版有明暗層次
 	mix: [16, 34, 22, 42, 28, 12][i % 6],
 	drift: [1, 1.35, 0.75, 1.2, 0.9, 1.45][i % 6],
-	image: detailImages[i]?.[1]?.default ?? null,
-	caption: detailImages[i] ? captionOf(detailImages[i][0]) : '',
-}));
+	image,
+	caption,
+});
+const mkNote = (path: string, content: string): Block => ({
+	kind: 'note',
+	label: captionOf(path),
+	paragraphs: content
+		.trim()
+		.split(/\n\s*\n/)
+		.map((s) => s.trim())
+		.filter(Boolean),
+});
+
+const blocks: Block[] = [];
+if (detailImages.length > 0) {
+	let i = 0;
+	for (const item of sequence) {
+		if (item.kind === 'img') blocks.push(mkPlate(i++, item.image, captionOf(item.path)));
+		else blocks.push(mkNote(item.path, item.content));
+	}
+} else {
+	for (let i = 0; i < plateCount; i++) blocks.push(mkPlate(i, null, ''));
+	for (const [path, content] of ownNotes) blocks.push(mkNote(path, content));
+}
 ---
 
 <article class="project-detail">
@@ -112,23 +165,32 @@ const plates = slots.slice(0, plateCount).map((p, i) => ({
 		<Content />
 	</div>
 
-	{/* —— 圖版區：錯落編排 + 漸進模糊顯影（放入真實圖片後自動替換佔位）—— */}
+	{/* —— 圖版區：錯落編排 + 漸進模糊顯影；NN-titre.txt 依序插入說明文字 bloc —— */}
 	<section class="plates" data-cat={d.category} aria-label="Plates">
 		{
-			plates.map((p) => (
-				<figure
-					class:list={['plate', p.span, { 'has-img': !!p.image }]}
-					data-plate-blur
-					data-drift={p.drift}
-					style={`--ratio:${p.ratio}; --mix:${p.mix}%;`}
-				>
-					{p.image && <Image src={p.image} alt={p.caption || d.title} class="plate-img" width={1600} />}
-					<span class="metadata plate-code">{p.code}</span>
-					<figcaption class="metadata plate-caption">
-						{p.caption || `${d.title} · Detail`}
-					</figcaption>
-				</figure>
-			))
+			blocks.map((b) =>
+				b.kind === 'note' ? (
+					<div class="plate-note">
+						{b.label && <span class="metadata note-label">{b.label}</span>}
+						{b.paragraphs.map((para) => (
+							<p>{para}</p>
+						))}
+					</div>
+				) : (
+					<figure
+						class:list={['plate', b.span, { 'has-img': !!b.image }]}
+						data-plate-blur
+						data-drift={b.drift}
+						style={`--ratio:${b.ratio}; --mix:${b.mix}%;`}
+					>
+						{b.image && <Image src={b.image} alt={b.caption || d.title} class="plate-img" width={1600} />}
+						<span class="metadata plate-code">{b.code}</span>
+						<figcaption class="metadata plate-caption">
+							{b.caption || `${d.title} · Detail`}
+						</figcaption>
+					</figure>
+				)
+			)
 		}
 	</section>
 </article>
@@ -316,6 +378,28 @@ const plates = slots.slice(0, plateCount).map((p, i) => ({
 		color: #ffffff;
 		opacity: 0.85;
 		text-shadow: 0 1px 10px rgba(26, 26, 26, 0.55);
+	}
+
+	/* 說明文字 bloc：窄欄嵌在圖版流之間，輔助說明 */
+	.plate-note {
+		grid-column: 2 / 9;
+		max-width: 480px;
+		padding: 16px 0 24px;
+	}
+	.note-label {
+		display: block;
+		margin-bottom: 8px;
+		opacity: 0.5;
+	}
+	.plate-note p {
+		margin: 0 0 8px;
+		color: var(--text-secondary);
+	}
+
+	@media (max-width: 720px) {
+		.plate-note {
+			grid-column: 1 / -1;
+		}
 	}
 
 	/* 排列組合：滿幅 / 高低雙聯 / 錯位寬幅 / 錯層對半 */
