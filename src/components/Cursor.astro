@@ -109,9 +109,10 @@
 		let rafId = 0;
 		let visible = false;
 
-		// —— 彗尾：最近軌跡點（帶時間戳，繪製時按年齡漸隱漸細）——
+		// —— 彗尾：最近軌跡點（帶時間戳，繪製時按年齡漸隱漸細；封頂防長尾堆積）——
 		type TrailPoint = { x: number; y: number; t: number };
-		const TRAIL_LIFE = 420; // ms
+		const TRAIL_LIFE = 380; // ms
+		const TRAIL_MAX = 26;
 		let trail: TrailPoint[] = [];
 
 		// —— 點擊火花 ——
@@ -149,26 +150,36 @@
 			ctx.clearRect(0, 0, canvas.width, canvas.height);
 			let busy = false;
 
-			// 彗尾：相鄰軌跡點連成漸細漸隱的光帶
+			// 彗尾：相鄰軌跡點連成漸細漸隱的光帶。
+			// 辉光不用 shadowBlur（逐段陰影極貴），改雙層描邊：寬淡光暈 + 細亮芯
 			trail = trail.filter((p) => now - p.t < TRAIL_LIFE);
 			if (trail.length > 1) {
 				busy = true;
 				ctx.lineCap = 'round';
-				ctx.shadowColor = accent;
-				ctx.shadowBlur = 10 * dpr;
+				ctx.strokeStyle = accent;
 				for (let i = 1; i < trail.length; i++) {
 					const a = trail[i - 1];
 					const b = trail[i];
 					const k = 1 - (now - b.t) / TRAIL_LIFE; // 0 舊 → 1 新
-					ctx.strokeStyle = accent;
-					ctx.globalAlpha = 0.55 * k * k;
-					ctx.lineWidth = (0.5 + 4.5 * k) * dpr;
+					const ax = a.x * dpr;
+					const ay = a.y * dpr;
+					const bx = b.x * dpr;
+					const by = b.y * dpr;
+					// 光暈層
+					ctx.globalAlpha = 0.14 * k;
+					ctx.lineWidth = (3 + 8 * k) * dpr;
 					ctx.beginPath();
-					ctx.moveTo(a.x * dpr, a.y * dpr);
-					ctx.lineTo(b.x * dpr, b.y * dpr);
+					ctx.moveTo(ax, ay);
+					ctx.lineTo(bx, by);
+					ctx.stroke();
+					// 亮芯層
+					ctx.globalAlpha = 0.7 * k * k;
+					ctx.lineWidth = (0.5 + 3 * k) * dpr;
+					ctx.beginPath();
+					ctx.moveTo(ax, ay);
+					ctx.lineTo(bx, by);
 					ctx.stroke();
 				}
-				ctx.shadowBlur = 0;
 				ctx.globalAlpha = 1;
 			}
 
@@ -203,8 +214,9 @@
 			const dt = lastFrame ? Math.min(48, now - lastFrame) : 16.7;
 			lastFrame = now;
 
-			x += (targetX - x) * 0.25;
-			y += (targetY - y) * 0.25;
+			// 流星頭零延遲貼住指針（拖尾負責「流」的感覺）；只有縮放做插值
+			x = targetX;
+			y = targetY;
 			scale += (targetScale - scale) * 0.18;
 			cursor.style.transform = `translate3d(${x - 4}px, ${y - 4}px, 0) scale(${scale.toFixed(3)})`;
 			if (label instanceof HTMLElement) {
@@ -248,7 +260,10 @@
 					document.documentElement.classList.add('has-custom-cursor');
 					cursor.style.opacity = '1';
 				}
-				if (!reduced) trail.push({ x: e.clientX, y: e.clientY, t: performance.now() });
+				if (!reduced) {
+					trail.push({ x: e.clientX, y: e.clientY, t: performance.now() });
+					if (trail.length > TRAIL_MAX) trail.shift();
+				}
 				wake();
 			},
 			{ passive: true }

@@ -168,11 +168,11 @@ const copies = [
 </div>
 
 <style define:vars={{ cellW: `${CELL_W}`, cellH: `${CELL_H}` }}>
-	/* 視口：全出血撐滿整頁——上緣越過透明 header，開頁即滿屏無白隙 */
+	/* 視口：全出血撐滿整頁——上緣越過透明 header（高度隨斷點變化），開頁即滿屏無白隙 */
 	.canvas-viewport {
 		position: relative;
-		height: calc(100svh + 64px);
-		margin-top: -64px;
+		height: calc(100svh + var(--header-h));
+		margin-top: calc(var(--header-h) * -1);
 		margin-inline: calc(var(--gutter) * -1);
 		overflow: hidden;
 		touch-action: none;

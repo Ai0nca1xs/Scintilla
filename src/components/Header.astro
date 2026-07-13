@@ -65,11 +65,14 @@ const navItems = [
 </header>
 
 <style>
-	/* 1. 吸頂容器：無背景——文字與按鈕直接浮在頁面之上 */
+	/* 1. 吸頂容器：無背景色塊——僅一層無色毛玻璃，
+	   滾動時穿過的內容被柔化，避免與導覽文字直接重疊打架 */
 	.site-header {
 		position: sticky;
 		top: 0;
 		z-index: 500;
+		-webkit-backdrop-filter: blur(10px);
+		backdrop-filter: blur(10px);
 	}
 
 	.header-inner {
@@ -302,19 +305,41 @@ const navItems = [
 		}
 	}
 
+	/* 移動端：語言切換移到右上角與站名同行；四顆按鈕獨占一行鋪開 */
 	@media (max-width: 720px) {
 		.header-inner {
-			flex-wrap: wrap;
-			gap: 8px;
-			padding-top: 8px;
-			padding-bottom: 8px;
+			position: relative;
+			flex-direction: column;
+			align-items: stretch;
+			gap: 10px;
+			padding-top: 10px;
+			padding-bottom: 10px;
+		}
+		.lang-switch {
+			position: absolute;
+			top: 12px;
+			right: var(--gutter);
 		}
 		.nav-right {
-			gap: 16px;
+			width: 100%;
 		}
-		.nav-btn {
+		.nav-links {
+			width: 100%;
+			justify-content: space-between;
+			gap: 4px;
+		}
+		/* .site-header a 的權重高於 .nav-btn，此處用雙類選擇器壓過 */
+		.site-header .nav-btn {
 			width: auto;
-			padding: 0 12px;
+			padding: 0 10px;
+			font-size: 10px;
+		}
+		.site-header .lang-switch a,
+		.site-header .lang-switch .separator {
+			font-size: 10px;
+		}
+		.nav-btn::before {
+			inset: -3px -4px;
 		}
 	}
 </style>

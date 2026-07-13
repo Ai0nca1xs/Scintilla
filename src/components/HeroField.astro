@@ -8,14 +8,14 @@
 <canvas class="hero-field" data-hero-field aria-hidden="true"></canvas>
 
 <style>
-	/* 滿版首屏：向上越過透明 header，寬滿 100vw，無白邊 */
+	/* 滿版首屏：向上越過透明 header（高度隨斷點變化），寬滿 100vw，無白邊 */
 	.hero-field {
 		position: absolute;
-		top: -60px;
+		top: calc(var(--header-h) * -1);
 		left: 50%;
 		transform: translateX(-50%);
 		width: 100vw;
-		height: calc(100svh + 60px);
+		height: calc(100svh + var(--header-h));
 		z-index: 0;
 		pointer-events: none;
 		filter: blur(26px) saturate(1.15);

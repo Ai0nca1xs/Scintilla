@@ -136,7 +136,7 @@ const projectsFor = (cats: readonly string[]) =>
 	/* --- 1. 首屏 (Hero) --- */
 	.hero-section {
 		position: relative;
-		min-height: calc(100svh - 54px);
+		min-height: calc(100svh - var(--header-h));
 		display: flex;
 		flex-direction: column;
 		justify-content: center;
@@ -483,6 +483,16 @@ const projectsFor = (cats: readonly string[]) =>
 	}
 
 	/* --- 響應式 --- */
+	/* 概念句：移動端屏寬不足以單行容納，允許換行保住可讀性（桌面維持不換行） */
+	@media (max-width: 720px) {
+		.concept-intro p {
+			white-space: normal;
+			font-size: 13px;
+			line-height: 1.7;
+			padding: 0 8px;
+		}
+	}
+
 	@media (max-width: 900px) {
 		.intro-grid,
 		.practice-grid,

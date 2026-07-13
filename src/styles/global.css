@@ -37,6 +37,10 @@
   /* 全站按鈕統一高度 */
   --btn-height: 24px;
 
+  /* 透明 header 的佔位高度：滿屏畫布（hero 光弧 / gallery）向上越過它時使用。
+     移動端 header 折行變高，此值隨斷點加大 */
+  --header-h: 64px;
+
   /* 分類色：每個分類一個純色 */
   --cat-gra: var(--color-orange);
   --cat-sce: var(--color-magenta);
@@ -326,6 +330,13 @@ b {
 
 ::view-transition-new(root) {
   animation: develop 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* 9b. 移動端全局變量調整 */
+@media (max-width: 720px) {
+  :root {
+    --header-h: 112px;
+  }
 }
 
 /* 10. 動效偏好：尊重「減少動態效果」設定 */
