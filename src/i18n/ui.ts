@@ -132,7 +132,7 @@ export const dict: Record<Lang, Dict> = {
 				},
 			],
 			galleryLabel: 'Personal Universe',
-			galleryText: 'A personal universe — image, sound, writing and worldbuilding, gathered as one sensibility.',
+			galleryText: 'A personal universe — image, sound, writing, worldbuilding and emerging AI practice, gathered as one sensibility.',
 			galleryCta: 'ENTER THE UNIVERSE ↗',
 		},
 		project: {
@@ -234,7 +234,7 @@ export const dict: Record<Lang, Dict> = {
 				},
 			],
 			galleryLabel: 'Univers personnel',
-			galleryText: 'Un univers personnel — image, son, écriture et worldbuilding, réunis en une seule sensibilité.',
+			galleryText: 'Un univers personnel — image, son, écriture, worldbuilding et pratiques émergentes en IA, réunis en une seule sensibilité.',
 			galleryCta: "ENTRER DANS L'UNIVERS ↗",
 		},
 		project: {
