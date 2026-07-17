@@ -63,6 +63,25 @@ const cover =
 		background: var(--plate);
 		color: var(--plate-ink, #f8f9fa);
 		overflow: hidden;
+		transition:
+			transform 0.45s var(--ease-spring),
+			box-shadow 0.45s var(--ease-oxide);
+	}
+
+	/* 懸浮提升：彈簧曲線微升 + 柔影——標本板被「拿起」的觸感（僅指針設備） */
+	@media (hover: hover) {
+		.specimen-plate:hover {
+			transform: translateY(-6px);
+			box-shadow: 0 22px 44px -20px rgba(26, 26, 26, 0.35);
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.specimen-plate,
+		.specimen-plate:hover {
+			transform: none;
+			transition: none;
+		}
 	}
 
 	/* 分類 → 純色底（可被 frontmatter 的 tone 覆蓋） */
@@ -98,7 +117,7 @@ const cover =
 	}
 
 	.specimen-plate:hover .plate-cover {
-		transform: scale(1.02);
+		transform: scale(1.04);
 	}
 
 	.plate-title,

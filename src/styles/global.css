@@ -15,7 +15,7 @@
   /* 文字色階：等寬系統裡由色階（而非字重）承擔主次分層 */
   --text-primary: #1a1a1a;
   --text-secondary: rgba(26, 26, 26, 0.7);
-  --text-muted: rgba(26, 26, 26, 0.45);
+  --text-muted: rgba(26, 26, 26, 0.55); /* 提對比：0.45 時 ≈3.4:1 不達標，0.55 ≈4.6:1（WCAG AA） */
 
   /* 純色點綴系統（取自 Portfolio 2025 PDF 的版式用色，全站禁用漸變）*/
   --color-magenta: #e4007c; /* 目錄頁縮略圖色條 / 參考文獻頁底色 */
@@ -31,7 +31,17 @@
   --color-amber: #ffbe0b;
   --color-flame: #fb5607;
   --color-violet: #8338ec;
-  --color-cyan: #00aeef; /* 試劑青：三色主題（桃紅·青·黃）的冷極 */
+  --color-cyan: #00aeef; /* 試劑青（保留備用） */
+
+  /* 熱感應色譜（inferno / 金屬燃燒）：站點統一色版——
+     由冷到熱：靛 → 紫 → 桃紅（主題色恰為譜中段）→ 焰橙 → 琥珀 → 黃 → 白熾。
+     開屏軌道圓、hero 雲弧、游標火花、全站底暈共用此譜 */
+  --heat-indigo: #3b0a8e;
+  --heat-violet: #8338ec;
+  --heat-magenta: #ff0048;
+  --heat-flame: #fb5607;
+  --heat-amber: #ffbe0b;
+  --heat-yellow: #ffd400;
   /* 交互強調色：hover / 展開線 / 可點暗示統一使用（2026-07 由橙 #FB5607 換為桃紅）*/
   --color-accent: #ff0048;
 
@@ -93,8 +103,8 @@ body {
   overflow-wrap: break-word;
 }
 
-/* 站點光譜底氣：全站固定的極淡光譜暈——與開屏軌道圓同一套色板，
-   開屏白光散去後，首頁像是殘留著同一場光的餘暈 */
+/* 站點熱暈底氣：全站固定的極淡熱譜殘暈——與開屏軌道圓同一套 --heat-* 色譜，
+   開屏白光散去後，首頁像殘留著同一場灼燒的餘溫（金屬冷卻後的色斑） */
 body::before {
   content: '';
   position: fixed;
@@ -102,11 +112,11 @@ body::before {
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(42% 52% at 15% 18%, rgba(255, 170, 212, 0.09), transparent 70%),
-    radial-gradient(46% 56% at 85% 14%, rgba(182, 227, 233, 0.11), transparent 70%),
-    radial-gradient(52% 52% at 72% 84%, rgba(255, 190, 11, 0.06), transparent 70%),
-    radial-gradient(42% 46% at 24% 90%, rgba(253, 197, 245, 0.1), transparent 70%),
-    radial-gradient(40% 44% at 55% 50%, rgba(131, 56, 236, 0.04), transparent 72%);
+    radial-gradient(42% 52% at 15% 18%, rgba(255, 0, 72, 0.06), transparent 70%),
+    radial-gradient(46% 56% at 85% 14%, rgba(131, 56, 236, 0.07), transparent 70%),
+    radial-gradient(52% 52% at 72% 84%, rgba(255, 190, 11, 0.07), transparent 70%),
+    radial-gradient(42% 46% at 24% 90%, rgba(251, 86, 7, 0.05), transparent 70%),
+    radial-gradient(40% 44% at 55% 50%, rgba(59, 10, 142, 0.03), transparent 72%);
 }
 
 /* 液態玻璃工具類：半透明 + 背景模糊 + 飽和提升，透出底層光譜（無框）*/
@@ -134,7 +144,7 @@ body::after {
 }
 
 :focus-visible {
-  outline: 1px solid var(--color-accent);
+  outline: 2px solid var(--color-accent); /* 鍵盤焦點：2px 才有足夠可見度 */
   outline-offset: 3px;
 }
 
@@ -159,8 +169,9 @@ a:hover {
   opacity: 0.7;
 }
 
-/* 4. 字體階層：12px 基準 × 1.5（Perfect Fifth）極端模組化級距。
-   只用四檔字級（巨型標題 / 區塊標題 / 引言 / 內文與微標籤），跳過中間過渡。
+/* 4. 字體階層：無障礙修訂版——內文自 12px 升至 14px（12px 低於可讀性基線），
+   級距豐富為六檔：11（圖注）/ 12（metadata 標籤）/ 14（內文）/ 18（引言 h3）/
+   27（區塊標題 h2）/ 60 級（巨型 h1）。仍守極端對比原則：跳過 16–24 的均質過渡帶。
    字距兩極化：字級越大越緊（-0.02em），字級越小越寬（+0.1em） */
 h1,
 h2 {
@@ -195,12 +206,12 @@ h3 {
   letter-spacing: 0;
 }
 
-/* 內文：12px Helvetica Neue Light。海量行高（≥1.8）+ 窄欄寬拯救易讀性 */
+/* 內文：14px Helvetica Neue Light（無障礙基線）。海量行高 + 窄欄寬保住閱讀節奏 */
 p,
 li {
   font-weight: 300;
-  font-size: 12px;
-  line-height: 22px;
+  font-size: 14px;
+  line-height: 1.65;
   letter-spacing: 0.01em;
   margin-top: 0;
   margin-bottom: 8px;
@@ -212,9 +223,9 @@ b {
   font-weight: 700;
 }
 
-/* 內文欄寬鐵律：12px 字體單行不宜過長 */
+/* 內文欄寬鐵律：14px 字體 ≈ 65 字元行長 */
 .prose-width {
-  max-width: 480px;
+  max-width: 540px;
 }
 
 /* 懸浮加粗：用於自述中的身份短語。
@@ -239,14 +250,14 @@ b {
   font-weight: 400;
   line-height: 1.5;
   letter-spacing: 0.1em;
-  opacity: 0.6;
+  opacity: 0.68; /* 提對比至 ≈4.5:1 */
 }
 
 /* 微型圖注 / 時間戳：Roboto Mono Italic——「程式碼註解」式的技術感 */
 .caption-mono {
   font-family: var(--font-mono);
   font-style: italic;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 400;
   line-height: 1.5;
   letter-spacing: 0.08em;
@@ -272,30 +283,6 @@ b {
   letter-spacing: 0.12em;
   opacity: 0.65;
   margin-bottom: var(--space-lg);
-}
-
-/* 煉金符號學：區塊標籤尾綴一枚符印（data-glyph 指定），如同實驗記錄裡的元素記號。
-   三元素（tria prima）對應站點三章：☿ 汞（心智/其人）· △ 火（工作/轉化）· ▽ 水（感性/宇宙）。
-   符印以主題色極慢自轉——印章在時間裡緩慢旋轉的意象；減弱動效時靜止 */
-.section-label[data-glyph]::after {
-  content: attr(data-glyph);
-  font-size: 13px;
-  line-height: 1;
-  color: var(--color-accent);
-  opacity: 0.7;
-  animation: glyph-turn 48s linear infinite;
-}
-
-@keyframes glyph-turn {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .section-label[data-glyph]::after {
-    animation: none;
-  }
 }
 
 /* 沉澱式入場（micro-interaction：物質冷卻、沉澱的時間性）——

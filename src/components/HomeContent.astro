@@ -41,8 +41,7 @@ const projectsFor = (cats: readonly string[]) =>
 </section>
 
 <section class="intro-section">
-	{/* 煉金三元素符印：☿ 汞＝心智（其人） */}
-	<span class="section-label" data-glyph="☿">01 / Profile</span>
+	<span class="section-label">01 / Profile</span>
 	<div class="intro-grid">
 		<p class="lead-text" data-text-motion set:html={t.home.introHtml} />
 		<div class="cv-panel" data-settle>
@@ -66,8 +65,7 @@ const projectsFor = (cats: readonly string[]) =>
 </section>
 
 <section class="practice-section">
-	{/* △ 火＝轉化（工作） */}
-	<span class="section-label" data-glyph="△">02 / {t.home.practiceLabel}</span>
+	<span class="section-label">02 / {t.home.practiceLabel}</span>
 	<div class="practice-grid">
 		{/* 左列：緊湊的定位說明 */}
 		<div class="practice-intro">
@@ -115,8 +113,7 @@ const projectsFor = (cats: readonly string[]) =>
 </section>
 
 <section class="gallery-section">
-	{/* ▽ 水＝感性（個人宇宙） */}
-	<span class="section-label" data-glyph="▽">03 / {t.home.galleryLabel}</span>
+	<span class="section-label">03 / {t.home.galleryLabel}</span>
 	<p class="gallery-text" data-type-shuffle data-settle>{t.home.galleryText}</p>
 	<a
 		href={localizePath(lang, '/gallery')}

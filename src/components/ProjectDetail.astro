@@ -146,7 +146,7 @@ if (detailImages.length > 0) {
 
 	{coverImg && <Image src={coverImg} alt={d.title} class="detail-cover" width={1800} />}
 
-	<dl class="spec-sheet metadata">
+	<dl class="spec-sheet metadata" data-settle>
 		{d.medium && <dt>Medium</dt>}
 		{d.medium && <dd>{d.medium}</dd>}
 		{d.materials && <dt>Materials</dt>}
@@ -161,7 +161,7 @@ if (detailImages.length > 0) {
 		</dd>
 	</dl>
 
-	<div class="prose">
+	<div class="prose" data-settle style="--settle-i: 1">
 		<Content />
 	</div>
 
@@ -170,7 +170,7 @@ if (detailImages.length > 0) {
 		{
 			blocks.map((b) =>
 				b.kind === 'note' ? (
-					<div class="plate-note">
+					<div class="plate-note" data-settle>
 						{b.label && <span class="metadata note-label">{b.label}</span>}
 						{b.paragraphs.map((para) => (
 							<p>{para}</p>
@@ -306,7 +306,7 @@ if (detailImages.length > 0) {
 
 	/* 內文窄欄：12px 字體的欄寬鐵律（400–500px） */
 	.prose {
-		max-width: 480px;
+		max-width: 540px; /* 14px 內文 ≈ 65 字元行長 */
 		margin: 0 auto;
 	}
 

@@ -68,8 +68,9 @@
 <script>
 	const SEEN_KEY = 'scintilla-splash-seen';
 
-	// p5 原稿的六色色板
-	const PALETTE = ['#FFAAD4', '#FDC5F5', '#B6E3E9', '#FFBE0B', '#FB5607', '#8338EC'];
+	// 熱感應色譜（與全站 --heat-* tokens 同源）：靛 → 紫 → 桃紅 → 焰橙 → 琥珀 → 黃。
+	// multiply 疊染在白底上呈現金屬灼燒的暈層；熱端占比高、冷端（靛/紫）作痕跡量
+	const PALETTE = ['#3B0A8E', '#8338EC', '#FF0048', '#FB5607', '#FFBE0B', '#FFD400'];
 	const SHAPES_NUM = 150;
 	const ALPHA = 80 / 255;
 
