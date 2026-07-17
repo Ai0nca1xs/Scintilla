@@ -1,10 +1,12 @@
 ---
-// Hero 背景「熱場雲弧」：光弧與以太雲的結合體，色譜取熱感應／金屬燃燒（--heat-*）。
-// 底層：三團徑向漸層「熱雲」緩慢漂移呼吸（以太雲的雲氣質感，但普通疊加、不做
-// multiply 減色——保住色相乾淨）；上層：數道光弧繞中心自轉、呼吸開合（清晰的色層）。
-// 熱物理排序：核心熱（黃/琥珀）、向外漸冷（焰橙→桃紅→紫→靛）——灼燒中的金屬斷面。
-// 畫布撐滿首屏（含透明 header 之後，不留白邊）；下半緣以漸變遮罩隱入白色。
-// 效能：DPR 減採樣、每 3 幀重繪（~20fps）、離開視口暫停、減弱動效只渲染一幀。
+// Hero 背景「幾何波簾」：ngsm《geometry》(openprocessing.org/sketch/2616431) 的白底移植版。
+// 原作：整幅畫面切成數十條直欄，每欄填一個 repeating-conic 漸層，漸層中心隨
+// sin(t − id·φ) 上下波動——欄與欄相位錯開，形成緩慢起伏的彩色波簾。
+// 本移植：色彩換成站點熱譜（--heat-*：靛→紫→桃紅→焰橙→琥珀→黃），全部壓低
+// 透明度（薄釉感，不搶白底與墨水標題）；波速較原作減半，近乎凝滯的湧動。
+// 畫布撐滿首屏（含透明 header），下半緣漸變遮罩隱入白色。
+// 效能：半解析度、每 3 幀重繪（~20fps）、離開視口暫停、減弱動效只渲染一幀；
+// 不支援 createConicGradient 的舊瀏覽器退化為直欄線性漸層（同一波動邏輯）。
 ---
 
 <canvas class="hero-field" data-hero-field aria-hidden="true"></canvas>
@@ -20,7 +22,8 @@
 		height: calc(100svh + var(--header-h));
 		z-index: 0;
 		pointer-events: none;
-		filter: blur(22px) saturate(1.15);
+		/* 輕柔焦：保留波簾的欄狀結構，只融掉硬邊 */
+		filter: blur(10px) saturate(1.1);
 		/* 下半緣漸變隱入白色畫布 */
 		-webkit-mask-image: linear-gradient(180deg, #000 0%, #000 74%, transparent 100%);
 		mask-image: linear-gradient(180deg, #000 0%, #000 74%, transparent 100%);
@@ -28,24 +31,17 @@
 </style>
 
 <script>
-	// 光弧參數：半徑遞增、轉速交替方向、弧長呼吸。
-	// 熱譜排序（半徑由內而外 = 溫度由高到低）：黃 → 琥珀 → 焰橙 → 桃紅（主題）→ 紫 → 靛
-	const ARC_COLORS = [
-		'rgba(255, 212, 0, 0.34)', // 黃（白熾核心）
-		'rgba(255, 190, 11, 0.32)', // 琥珀
-		'rgba(251, 86, 7, 0.28)', // 焰橙
-		'rgba(255, 0, 72, 0.34)', // 桃紅（主題色）
-		'rgba(131, 56, 236, 0.2)', // 紫
-		'rgba(59, 10, 142, 0.12)', // 靛（冷卻邊緣，痕跡量）
+	// 熱譜（低透明度薄釉）：靛 → 紫 → 桃紅（主題）→ 焰橙 → 琥珀 → 黃。
+	// 每色間插入透明檔位，讓波簾透氣、露出白底
+	const CURTAIN_COLORS = [
+		'rgba(59, 10, 142, 0.1)', // 靛
+		'rgba(131, 56, 236, 0.13)', // 紫
+		'rgba(255, 0, 72, 0.15)', // 桃紅（主題色）
+		'rgba(251, 86, 7, 0.12)', // 焰橙
+		'rgba(255, 190, 11, 0.14)', // 琥珀
+		'rgba(255, 212, 0, 0.12)', // 黃
 	];
-
-	// 熱雲參數：三團徑向暈（以太雲基因），各沿 Lissajous 軌跡極慢漂移、半徑呼吸。
-	// 同樣熱排序：琥珀（熱）居中活躍、桃紅居中、紫（冷）游移外圍
-	const CLOUDS = [
-		{ color: '255, 190, 11', alpha: 0.16, r: 0.5, cx: 0.42, cy: 0.4, fx: 0.021, fy: 0.017, ph: 0 },
-		{ color: '255, 0, 72', alpha: 0.12, r: 0.62, cx: 0.6, cy: 0.52, fx: 0.013, fy: 0.019, ph: 2.1 },
-		{ color: '131, 56, 236', alpha: 0.09, r: 0.72, cx: 0.5, cy: 0.6, fx: 0.009, fy: 0.012, ph: 4.4 },
-	];
+	const CLEAR = 'rgba(255, 255, 255, 0)';
 
 	function initHeroField() {
 		const canvas = document.querySelector('[data-hero-field]');
@@ -67,26 +63,22 @@
 		resize();
 		window.addEventListener('resize', resize);
 
-		type Arc = {
-			radius: number; // 相對 min(w,h) 的半徑係數
-			squish: number; // 縱向壓扁比
-			speed: number; // 自轉速度（rad/s）
-			phase: number;
-			span: number; // 基礎弧長（rad）
-			breathe: number; // 弧長呼吸頻率
-			width: number; // 相對線寬係數
-			color: string;
+		// 原作 30 欄 / 1000px；此處按寬度取 ~26 欄，欄寬隨視口伸縮
+		const COLS = 26;
+		const REPS = 2; // conic 色環重複次數（原作 repeating-conic 的「repeating」）
+		const supportsConic = typeof ctx.createConicGradient === 'function';
+
+		// 把色列（含透明間隔）鋪滿一圈 / 一段線性漸層
+		const addStops = (grad: CanvasGradient) => {
+			const seq: string[] = [];
+			for (let r = 0; r < REPS; r++) {
+				for (const c of CURTAIN_COLORS) seq.push(c, CLEAR);
+			}
+			seq.push(seq[0]); // 首尾同色，環縫無接痕
+			for (let i = 0; i < seq.length; i++) {
+				grad.addColorStop(i / (seq.length - 1), seq[i]);
+			}
 		};
-		const arcs: Arc[] = ARC_COLORS.map((color, i) => ({
-			radius: 0.2 + i * 0.085,
-			squish: 0.58 + 0.06 * Math.sin(i * 2.1),
-			speed: (0.04 + 0.018 * i) * (i % 2 === 0 ? 1 : -1),
-			phase: i * 1.7,
-			span: 1.1 + 0.35 * (i % 3),
-			breathe: 0.12 + 0.04 * i,
-			width: 0.045 + 0.012 * (i % 3),
-			color,
-		}));
 
 		const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 		let rafId = 0;
@@ -95,8 +87,7 @@
 		const start = performance.now();
 
 		const draw = () => {
-			// 光弧漂移極慢，~20fps 足夠——每三幀才重繪一次，把全屏 blur(22px) 的
-			// 重新合成頻率再降三分之一，主線程留給游標與流體
+			// 波簾湧動極慢，~20fps 足夠——每 3 幀重繪，主線程留給游標與流體
 			frameNo++;
 			if (!reduced && frameNo % 3 !== 0) {
 				if (visible) rafId = requestAnimationFrame(draw);
@@ -104,38 +95,28 @@
 			}
 			const t = reduced ? 12 : (performance.now() - start) / 1000;
 			ctx.clearRect(0, 0, w, h);
-			const cx = w * 0.5;
-			const cy = h * 0.46;
-			const base = Math.min(w, h);
 
-			// —— 底層熱雲：徑向暈沿 Lissajous 漂移、半徑緩慢呼吸（普通疊加，色相不混濁）——
-			for (const c of CLOUDS) {
-				const gx = (c.cx + 0.1 * Math.sin(t * c.fx * 60 + c.ph)) * w;
-				const gy = (c.cy + 0.08 * Math.cos(t * c.fy * 60 + c.ph)) * h;
-				const gr = base * c.r * (1 + 0.12 * Math.sin(t * 0.05 + c.ph));
-				const grad = ctx.createRadialGradient(gx, gy, 0, gx, gy, gr);
-				grad.addColorStop(0, `rgba(${c.color}, ${c.alpha})`);
-				grad.addColorStop(1, `rgba(${c.color}, 0)`);
+			const stepX = w / COLS;
+			const amp = h * 0.22; // 波幅：漸層中心的垂直擺程
+			const cy = h * 0.48;
+			for (let i = 0; i < COLS; i++) {
+				// 原作核心：sin(frameCount·0.02 − id·φ) 的相位波（速度減半 → 0.28 rad/s）
+				const wave = Math.sin(t * 0.28 - i * 0.55);
+				const gy = cy + amp * wave;
+				const gx = (i + 0.5) * stepX;
+				let grad: CanvasGradient;
+				if (supportsConic) {
+					// 起始角亦隨波微轉（原作 startAngle = gradientY·0.01）
+					grad = ctx.createConicGradient(wave * 0.9, gx, gy);
+				} else {
+					// 舊瀏覽器退化：以波動中心為界的縱向線性漸層
+					grad = ctx.createLinearGradient(gx, gy - h * 0.6, gx, gy + h * 0.6);
+				}
+				addStops(grad);
 				ctx.fillStyle = grad;
-				ctx.fillRect(0, 0, w, h);
+				ctx.fillRect(i * stepX, 0, stepX + 1, h);
 			}
 
-			// —— 上層光弧 ——
-			ctx.lineCap = 'round';
-			for (const a of arcs) {
-				const rot = a.phase + t * a.speed;
-				const span = a.span + 0.6 * Math.sin(t * a.breathe + a.phase);
-				ctx.save();
-				ctx.translate(cx, cy);
-				ctx.rotate(rot);
-				ctx.scale(1, a.squish);
-				ctx.beginPath();
-				ctx.arc(0, 0, base * a.radius, 0, Math.max(0.4, span));
-				ctx.strokeStyle = a.color;
-				ctx.lineWidth = base * a.width;
-				ctx.stroke();
-				ctx.restore();
-			}
 			if (!reduced && visible) rafId = requestAnimationFrame(draw);
 		};
 

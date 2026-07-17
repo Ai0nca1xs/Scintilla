@@ -69,10 +69,10 @@
 	const SEEN_KEY = 'scintilla-splash-seen';
 
 	// 熱感應色譜（與全站 --heat-* tokens 同源）：靛 → 紫 → 桃紅 → 焰橙 → 琥珀 → 黃。
-	// multiply 疊染在白底上呈現金屬灼燒的暈層；熱端占比高、冷端（靛/紫）作痕跡量
+	// multiply 疊染在白底上呈現金屬灼燒的暈層；透明度壓低（≈0.18）——色如薄釉，不搶白底
 	const PALETTE = ['#3B0A8E', '#8338EC', '#FF0048', '#FB5607', '#FFBE0B', '#FFD400'];
 	const SHAPES_NUM = 150;
-	const ALPHA = 80 / 255;
+	const ALPHA = 45 / 255;
 
 	type Shape = {
 		r: number;
@@ -99,10 +99,10 @@
 				r,
 				maxD: rand(r * 0.3, r * 0.5),
 				t: rand(0, Math.PI * 2),
-				// 公轉與脈動皆放慢（轉速 ×0.3、呼吸 ×0.5），更沉靜的漂移感
-				tStep: rand(0.1, 1) * (Math.PI / 180) * 0.3 * (Math.random() > 0.5 ? 1 : -1),
+				// 公轉與脈動再放慢一檔（轉速 ×0.15、呼吸 ×0.25）——近乎凝滯的緩慢瀰散
+				tStep: rand(0.1, 1) * (Math.PI / 180) * 0.15 * (Math.random() > 0.5 ? 1 : -1),
 				dt: rand(0, Math.PI * 2),
-				dStep: rand(1, 5) * (Math.PI / 180) * 0.5,
+				dStep: rand(1, 5) * (Math.PI / 180) * 0.25,
 				color: hexToRgba(PALETTE[Math.floor(Math.random() * PALETTE.length)], ALPHA),
 			});
 		}
