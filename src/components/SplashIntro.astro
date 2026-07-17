@@ -69,10 +69,11 @@
 	const SEEN_KEY = 'scintilla-splash-seen';
 
 	// 熱感應色譜（與全站 --heat-* tokens 同源）：靛 → 紫 → 桃紅 → 焰橙 → 琥珀 → 黃。
-	// multiply 疊染在白底上呈現金屬灼燒的暈層；透明度壓低（≈0.18）——色如薄釉，不搶白底
+	// multiply 疊染在白底上呈現金屬灼燒的暈層。單圓 alpha ≈0.12：150 圓疊染累積後
+	// 的整體濃度只比首頁波簾（0.10–0.15 單層）稍濃一點——別直接比單值，疊染會放大
 	const PALETTE = ['#3B0A8E', '#8338EC', '#FF0048', '#FB5607', '#FFBE0B', '#FFD400'];
 	const SHAPES_NUM = 150;
-	const ALPHA = 45 / 255;
+	const ALPHA = 30 / 255;
 
 	type Shape = {
 		r: number;

@@ -23,7 +23,7 @@
 		z-index: 0;
 		pointer-events: none;
 		/* 輕柔焦：保留波簾的欄狀結構，只融掉硬邊 */
-		filter: blur(10px) saturate(1.1);
+		filter: blur(6px) saturate(1.1);
 		/* 下半緣漸變隱入白色畫布 */
 		-webkit-mask-image: linear-gradient(180deg, #000 0%, #000 74%, transparent 100%);
 		mask-image: linear-gradient(180deg, #000 0%, #000 74%, transparent 100%);
@@ -63,8 +63,8 @@
 		resize();
 		window.addEventListener('resize', resize);
 
-		// 原作 30 欄 / 1000px；此處按寬度取 ~26 欄，欄寬隨視口伸縮
-		const COLS = 26;
+		// 原作 30 欄 / 1000px；此處取 30 欄，欄寬隨視口伸縮
+		const COLS = 30;
 		const REPS = 2; // conic 色環重複次數（原作 repeating-conic 的「repeating」）
 		const supportsConic = typeof ctx.createConicGradient === 'function';
 
