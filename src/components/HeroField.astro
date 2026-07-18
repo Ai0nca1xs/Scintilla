@@ -97,8 +97,8 @@
 			const cy = h * 0.48;
 			for (let i = 0; i < COLS; i++) {
 				// 原作核心：sin(frameCount·0.02 − id·0.1)——欄間相位僅差 0.1，
-				// 整幅簾是一個緩慢的大湧浪（速度按她的偏好放慢至 0.2 rad/s）
-				const wave = Math.sin(t * 0.2 - i * 0.1);
+				// 整幅簾是一個緩慢的大湧浪（速度按她的偏好再放慢至 0.12 rad/s，周期 ≈52s）
+				const wave = Math.sin(t * 0.12 - i * 0.1);
 				const gy = cy + amp * wave;
 				const gx = (i + 0.5) * stepX;
 				let grad: CanvasGradient;
